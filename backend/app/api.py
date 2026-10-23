@@ -151,6 +151,15 @@ def router() -> APIRouter:
         rows = await _store(request).recent_drives(car["id"], limit=limit, before=before)
         return {"car_id": car["id"], "drives": [_drive_row(d) for d in rows]}
 
+    @api.get("/stats")
+    async def stats(
+        request: Request,
+        car_id: int | None = None,
+        months: int = Query(default=6, ge=3, le=24),
+    ):
+        car = await _pick_car(request, car_id)
+        return await _store(request).stats(car["id"], _tz(_settings(request)), months)
+
     @api.get("/stream")
     async def stream(request: Request, car_id: int | None = None):
         hub = _hub(request)

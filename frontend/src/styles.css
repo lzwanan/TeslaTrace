@@ -989,3 +989,51 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Month bars: flex columns with percentage heights, labels in their own row. */
+.bars-wrap {
+  margin-top: 4px;
+}
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 110px;
+}
+@container app (min-width: 640px) {
+  .bars {
+    height: 132px;
+  }
+}
+.bar-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+}
+.bar {
+  width: 100%;
+  max-width: 46px;
+  margin: 0 auto;
+  border-radius: 6px 6px 3px 3px;
+  background: var(--line2);
+  min-height: 3px;
+  transition: height 0.4s ease;
+}
+.bar.current {
+  background: var(--red);
+}
+.bars-labels {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.bars-labels span {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  color: var(--t3);
+  white-space: nowrap;
+  overflow: hidden;
+}

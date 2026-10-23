@@ -32,3 +32,21 @@ def day_start(now: datetime, tz: tzinfo) -> datetime:
 def month_start(now: datetime, tz: tzinfo) -> datetime:
     local = now.astimezone(tz)
     return to_naive_utc(local.replace(day=1, hour=0, minute=0, second=0, microsecond=0))
+
+
+def months_back(now: datetime, tz: tzinfo, months: int) -> datetime:
+    """First instant of the month N-1 months ago, as naive UTC."""
+    local = now.astimezone(tz).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    index = local.month - months  # 0-based month arithmetic without dateutil
+    year, month = local.year + index // 12, index % 12 + 1
+    return to_naive_utc(local.replace(year=year, month=month))
+
+
+def month_keys(now: datetime, tz: tzinfo, months: int) -> list[str]:
+    """["2026-05", ...] oldest first, including months with no data."""
+    local = now.astimezone(tz)
+    keys = []
+    for back in range(months - 1, -1, -1):
+        index = local.month - 1 - back
+        keys.append(f"{local.year + index // 12}-{index % 12 + 1:02d}")
+    return keys

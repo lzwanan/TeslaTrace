@@ -122,6 +122,7 @@ GET /api/v1/cars              every car in this TeslaMate database
 GET /api/v1/live              current state (MQTT first, newest position as fallback)
 GET /api/v1/summary           the whole home screen in one request
 GET /api/v1/drives?limit=20   trip list, keyset paginated
+GET /api/v1/stats?months=6    monthly distance, cost and battery estimate
 GET /api/v1/stream            SSE: one snapshot, then a frame per change
 ```
 
@@ -132,8 +133,8 @@ GET /api/v1/stream            SSE: one snapshot, then a frame per change
 | P0    | Design system, card registry, layout breakpoints                             | ✅ done      |
 | P1    | FastAPI: read-only DB, MQTT → SSE, `/api/v1/summary`, `/drives`, healthcheck | ✅ done      |
 | P2    | React app: overview, drives, card registry, zh/en, dark and light            | ✅ done      |
-| P3    | Insights: materialized views, battery health, vampire drain                  | 🚧 next      |
-| P4    | Auth hardening, PWA, published image, Synology docs                          | ⬜           |
+| P3    | Insights: monthly distance and cost, battery capacity from charge sessions   | ✅ done      |
+| P4    | Auth hardening, PWA, published image, Synology docs                          | 🚧 next      |
 | P5    | Trip replay, multi-car                                                       | ⬜           |
 
 
