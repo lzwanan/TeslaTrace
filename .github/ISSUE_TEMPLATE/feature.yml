@@ -1,0 +1,50 @@
+name: Feature request
+description: A card, a view, or a behaviour you miss.
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One filter to apply before writing: **would this change a decision you make about the car today?**
+        TeslaTrace deliberately stays a glanceable dashboard. Deep analysis belongs in Grafana — that is not a gap, it is the boundary.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: Describe the situation, not the solution. "When I ... I cannot tell whether ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+    validations:
+      required: false
+
+  - type: dropdown
+    id: data
+    attributes:
+      label: Is the data already in TeslaMate?
+      description: TeslaTrace only reads existing data — it never calls the car API.
+      options:
+        - Yes, it comes from TeslaMate's database
+        - Yes, it is published over MQTT
+        - It needs a value TeslaMate does not store today
+        - I do not know
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where would it live
+      options:
+        - New card on the overview
+        - New card on insights
+        - New page
+        - Existing card, more detail
+    validations:
+      required: false

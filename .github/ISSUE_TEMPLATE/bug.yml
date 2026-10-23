@@ -1,0 +1,80 @@
+name: Bug report
+description: Something is broken — wrong numbers, blank cards, connection drops.
+title: "[bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: please run the checks in `deploy/README.md` (or open `/api/healthz`) so we know whether it is TeslaTrace or the data behind it.
+
+        **Never paste your database password, MQTT password, VIN, home address, or a screenshot that shows your location.**
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the dashboard on ...
+        2. Tap ...
+        3. See ...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - Live / overview
+        - Drives
+        - Charging
+        - Insights
+        - Deployment / reverse proxy
+        - API
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: TeslaTrace version
+      description: Image tag or commit SHA.
+    validations:
+      required: true
+
+  - type: input
+    id: teslamate
+    attributes:
+      label: TeslaMate / PostgreSQL version
+      placeholder: "TeslaMate v4.2.0 / PostgreSQL 17.11"
+    validations:
+      required: true
+
+  - type: input
+    id: client
+    attributes:
+      label: Browser and device
+      placeholder: "iPhone 15 / Safari 18 · or · Chrome 130 on Windows 11"
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Container logs, and the response of `curl -s localhost:8080/api/healthz`.
+        Redact hostnames, IPs and credentials.
+      render: shell
+    validations:
+      required: false

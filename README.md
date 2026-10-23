@@ -6,19 +6,25 @@
 
 A self-hosted, mobile-first dashboard for [TeslaMate](https://github.com/teslamate-org/teslamate) data.
 
-[![Status](https://img.shields.io/badge/status-design%20preview-orange)](#roadmap)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Backend](https://img.shields.io/badge/backend-FastAPI-009688)](#architecture)
-[![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-61dafb)](#architecture)
+![Status](https://img.shields.io/badge/status-design%20preview-orange)
 
-<img src="docs/screenshots/desktop.png" width="860" alt="TeslaTrace on desktop">
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
-<img src="docs/screenshots/mobile.png" width="250" alt="TeslaTrace on mobile">
+![Backend](https://img.shields.io/badge/backend-FastAPI-009688)
+
+
+
+![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-61dafb)
+
+![TeslaTrace on desktop](docs/screenshots/desktop.png)
+
+![TeslaTrace on mobile](docs/screenshots/mobile.png)
 
 </div>
 
 > ### Status: design preview
-> The screenshots above are a **working interactive prototype** — open [`demo/index.html`](demo/index.html) in any browser, no build step, no dependencies.
+>
+> The screenshots above are a **working interactive prototype** — open [`demo/index.html`](demo/index.html) in any browser, no build step, no dependencies.  
 > The FastAPI backend and the React app are in progress. **Nothing here is production-ready yet.**
 
 ---
@@ -35,13 +41,13 @@ TeslaTrace is the other half:
 
 ## What it will do
 
-| Area | Highlights |
-|---|---|
-| Live | State pill (charging / driving / online / asleep *for 42 min*), SOC ring, range, charger power, time to full, live position |
-| Drives | Trip list with route map, per-trip consumption and cost, replay (planned) |
-| Charging | Session list, SOC curve, cost with time-of-use tariffs, home vs Supercharger split |
-| Insights | Daily / monthly consumption, battery health trend, vampire drain while parked, savings vs petrol |
-| Platform | Responsive from 390 px to 1440 px, installable PWA, dark and light themes |
+| Area     | Highlights                                                                                                                  |
+| -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Live     | State pill (charging / driving / online / asleep *for 42 min*), SOC ring, range, charger power, time to full, live position |
+| Drives   | Trip list with route map, per-trip consumption and cost, replay (planned)                                                   |
+| Charging | Session list, SOC curve, cost with time-of-use tariffs, home vs Supercharger split                                          |
+| Insights | Daily / monthly consumption, battery health trend, vampire drain while parked, savings vs petrol                            |
+| Platform | Responsive from 390 px to 1440 px, installable PWA, dark and light themes                                                   |
 
 Deliberately **not** included: raw current/voltage traces, per-sample GPS dumps, vehicle option flags. Those belong in Grafana.
 
@@ -82,14 +88,14 @@ Then reverse-proxy it with HTTPS and put an auth layer in front. **Do not expose
 
 ## Roadmap
 
-| Phase | Scope | Status |
-|---|---|---|
-| P0 | Design system, card registry, layout breakpoints | ✅ prototype |
-| P1 | FastAPI skeleton: read-only DB, MQTT → SSE, `/api/v1/summary` | 🚧 in progress |
-| P2 | React app: overview + drives + charging | ⬜ |
-| P3 | Insights: materialized views, battery health, vampire drain | ⬜ |
-| P4 | Auth, PWA, Docker image, Synology docs | ⬜ |
-| P5 | Trip replay, multi-car | ⬜ |
+| Phase | Scope                                                         | Status         |
+| ----- | ------------------------------------------------------------- | -------------- |
+| P0    | Design system, card registry, layout breakpoints              | ✅ prototype    |
+| P1    | FastAPI skeleton: read-only DB, MQTT → SSE, `/api/v1/summary` | 🚧 in progress |
+| P2    | React app: overview + drives + charging                       | ⬜              |
+| P3    | Insights: materialized views, battery health, vampire drain   | ⬜              |
+| P4    | Auth, PWA, Docker image, Synology docs                        | ⬜              |
+| P5    | Trip replay, multi-car                                        | ⬜              |
 
 ## Design decisions
 
