@@ -1,0 +1,30 @@
+# Minimal deployment: four values, all of them already in your TeslaMate compose.
+#
+#   cd deploy && cp .env.example .env && vi .env      # paste DATABASE_PASS
+#   docker compose -f docker-compose.example.yml up -d
+#
+# It joins TeslaMate's existing Docker network, so neither PostgreSQL nor the
+# broker needs a port published to the host.
+services:
+  teslatrace:
+    image: ghcr.io/lzwanan/teslatrace:latest
+    container_name: teslatrace
+    restart: unless-stopped
+    environment:
+      DATABASE_HOST: database
+      DATABASE_PASS: "${DATABASE_PASS:?set DATABASE_PASS in .env}"
+      MQTT_HOST: mosquitto
+      TZ: "${TZ:-Asia/Shanghai}"
+      AUTH_TOKEN: "${AUTH_TOKEN:-}"
+    ports:
+      - "8000:8000"
+    networks:
+      - teslamate
+    mem_limit: 320m
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  teslamate:
+    external: true
+    name: teslamate_default

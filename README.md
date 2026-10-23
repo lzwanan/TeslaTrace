@@ -61,9 +61,9 @@ TeslaMate ──► PostgreSQL 17 ─┐
 ```
 
 - **Read-only database access.** A dedicated `teslamate_ro` role with `SELECT` only. TeslaTrace never writes to your TeslaMate data.
-- **Anti-corruption views.** All queries go through a self-owned `app` schema (views + materialized views) instead of binding to TeslaMate's tables. When TeslaMate ships a schema migration, one line of SQL fixes it — not a rewrite.
+- **Schema knowledge lives in one place.** Every column name TeslaMate exposes is in `backend/app/sql/*.sql`. When TeslaMate ships a migration, the fix is one file — not a hunt through route handlers. No views, no DDL, no migration step: the service runs on `SELECT` alone.
 - **MQTT for live state, PostgreSQL for history.** No polling of the car, no waking it up.
-- **Server-side downsampling.** A 13M-row `positions` table is never shipped to the browser; tracks are reduced to ~1500 points before serialization.
+- **Naive UTC handled once.** TeslaMate writes UTC into `timestamp without time zone` columns; reading them without attaching a zone shifts the whole dashboard by the UTC offset. That conversion lives in `app/timeutil.py` and is covered by tests.
 - **SSE, not WebSocket.** The data only flows one way. One less protocol to debug through a reverse proxy.
 
 ## Requirements
@@ -75,16 +75,56 @@ TeslaMate ──► PostgreSQL 17 ─┐
 
 ## Quick start
 
-Not available yet — the backend is being written. The intended shape is:
+The backend runs today. Four values, all of them already in your TeslaMate compose file.
 
 ```bash
-git clone https://github.com/lzwanan/teslatrace
-cd teslatrace
-cp deploy/.env.example deploy/.env      # DB password, MQTT URL, auth token
-docker compose -f deploy/docker-compose.example.yml up -d
+git clone https://github.com/lzwanan/TeslaTrace && cd TeslaTrace/deploy
+cp .env.example .env          # paste DATABASE_PASS from your TeslaMate compose
+docker build -t ghcr.io/lzwanan/teslatrace:latest ../backend   # until the first image is published
+docker compose -f docker-compose.example.yml up -d
 ```
 
-Then reverse-proxy it with HTTPS and put an auth layer in front. **Do not expose it to the internet without authentication** — it shows your car's real-time location.
+It joins TeslaMate's existing Docker network, so neither PostgreSQL nor Mosquitto needs a port published. Then:
+
+```bash
+curl localhost:8000/api/v1/summary     # your car, right now
+open http://localhost:8000/api/docs    # interactive API docs
+```
+
+Running without Docker:
+
+```bash
+cd backend
+pip install -e ".[dev]"
+DATABASE_HOST=localhost DATABASE_PASS=... MQTT_HOST=localhost python -m app
+```
+
+Finally, reverse-proxy it with HTTPS and put an auth layer in front. **Do not expose it to the internet without authentication** — it shows your car's real-time location.
+
+## Configuration
+
+| Variable | Default | Notes |
+|---|---|---|
+| `DATABASE_PASS` | — | **The only required value.** Copy it from your TeslaMate compose |
+| `DATABASE_HOST` | `database` | TeslaMate's service name |
+| `DATABASE_PORT` / `DATABASE_NAME` / `DATABASE_USER` | `5432` / `teslamate` / `teslamate` | Rarely changed |
+| `MQTT_HOST` | `mosquitto` | TeslaMate's service name |
+| `MQTT_PORT` / `MQTT_USERNAME` / `MQTT_PASSWORD` | `1883` / — / — | Only if your broker needs auth |
+| `TZ` | `Asia/Shanghai` | Decides where "today" starts |
+| `AUTH_TOKEN` | empty | Empty means the API is open — fine on a LAN, never on the internet |
+
+That is the whole surface. There is no per-car setting (cars are discovered from the database) and no coordinate setting (the API returns what TeslaMate stored).
+
+## API
+
+```
+GET /healthz                  database + broker status, for the container healthcheck
+GET /api/v1/cars              every car in this TeslaMate database
+GET /api/v1/live              current state (MQTT first, newest position as fallback)
+GET /api/v1/summary           the whole home screen in one request
+GET /api/v1/drives?limit=20   trip list, keyset paginated
+GET /api/v1/stream            SSE: one snapshot, then a frame per change
+```
 
 ## Roadmap
 

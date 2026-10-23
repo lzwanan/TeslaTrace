@@ -53,9 +53,9 @@ TeslaMate ──► PostgreSQL 17 ─┐
 ```
 
 - **只读访问数据库**：独立 `teslamate_ro` 角色，只有 `SELECT`。TeslaTrace 永不改写你的 TeslaMate 数据。
-- **防腐视图**：所有查询都走自建的 `app` schema（视图 + 物化视图），不直接绑定 TeslaMate 的表。它升级改字段时，改一行 SQL 就能适配，而不是重写代码。
+- **表结构知识集中在一处**：TeslaMate 的每个字段都写在 `backend/app/sql/*.sql` 里。它升级改字段时，改一个文件就够，不用翻遍路由代码。不建视图、不做 DDL、不需要迁移步骤 —— 服务只靠 `SELECT` 运行。
 - **实时走 MQTT，历史走 PostgreSQL**：不轮询车辆，不唤醒它。
-- **服务端降采样**：1300 万行的 `positions` 不会传给浏览器，轨迹在序列化前压到约 1500 个点。
+- **naive UTC 只在一个地方处理**：TeslaMate 把 UTC 写进 `timestamp without time zone` 列，读取时不补时区会让整个看板偏移一个时差。这层转换在 `app/timeutil.py`，并有测试覆盖。
 - **用 SSE 而不是 WebSocket**：数据只单向流动，少一个要调协议的东西。
 
 ## 环境要求
@@ -67,24 +67,64 @@ TeslaMate ──► PostgreSQL 17 ─┐
 
 ## 快速开始
 
-暂不可用 —— 后端还在写。目标形态：
+后端已经能跑。四个值，全都来自你现有的 TeslaMate compose。
 
 ```bash
-git clone https://github.com/lzwanan/teslatrace
-cd teslatrace
-cp deploy/.env.example deploy/.env      # 数据库密码、MQTT 地址、访问令牌
-docker compose -f deploy/docker-compose.example.yml up -d
+git clone https://github.com/lzwanan/TeslaTrace && cd TeslaTrace/deploy
+cp .env.example .env          # 把 TeslaMate compose 里的 DATABASE_PASS 填进去
+docker build -t ghcr.io/lzwanan/teslatrace:latest ../backend   # 镜像发布前先本地构建
+docker compose -f docker-compose.example.yml up -d
 ```
 
-然后必须套 HTTPS 反代并加一层认证。**不要在无认证的情况下暴露到公网** —— 它会显示车辆的实时位置。
+它会直接接入 TeslaMate 现有的 Docker 网络，所以 PostgreSQL 和 Mosquitto 都不用对外映射端口。然后：
+
+```bash
+curl localhost:8000/api/v1/summary     # 你的车，此刻
+open http://localhost:8000/api/docs    # 交互式 API 文档
+```
+
+不用 Docker 直接跑：
+
+```bash
+cd backend
+pip install -e ".[dev]"
+DATABASE_HOST=localhost DATABASE_PASS=... MQTT_HOST=localhost python -m app
+```
+
+最后必须套 HTTPS 反代并加一层认证。**不要在无认证的情况下暴露到公网** —— 它会显示车辆的实时位置。
+
+## 配置
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `DATABASE_PASS` | — | **唯一必填项**，从 TeslaMate compose 里复制 |
+| `DATABASE_HOST` | `database` | TeslaMate 的服务名 |
+| `DATABASE_PORT` / `DATABASE_NAME` / `DATABASE_USER` | `5432` / `teslamate` / `teslamate` | 一般不用改 |
+| `MQTT_HOST` | `mosquitto` | TeslaMate 的服务名 |
+| `MQTT_PORT` / `MQTT_USERNAME` / `MQTT_PASSWORD` | `1883` / — / — | broker 需要认证时才填 |
+| `TZ` | `Asia/Shanghai` | 决定"今天"从几点开始 |
+| `AUTH_TOKEN` | 空 | 留空即不校验，内网可用，公网绝对不行 |
+
+就这些。没有按车配置（车辆从数据库自动发现），也没有坐标配置（存什么返回什么）。
+
+## 接口
+
+```
+GET /healthz                  数据库与 broker 状态，供容器健康检查
+GET /api/v1/cars              这个 TeslaMate 库里的所有车
+GET /api/v1/live              当前状态（优先 MQTT，冷启动回退到最新位置）
+GET /api/v1/summary           首页所需内容，一次请求拿全
+GET /api/v1/drives?limit=20   行程列表，游标分页
+GET /api/v1/stream            SSE：先一帧快照，之后每次变化推一帧
+```
 
 ## 路线图
 
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | P0 | 设计系统、卡片注册表、断点布局 | ✅ 原型完成 |
-| P1 | FastAPI 骨架：只读库、MQTT→SSE、`/api/v1/summary` | 🚧 进行中 |
-| P2 | React 应用：概览 + 行程 + 充电 | ⬜ |
+| P1 | FastAPI：只读库、MQTT→SSE、`/api/v1/summary`、`/drives`、健康检查 | ✅ 完成 |
+| P2 | React 应用：概览 + 行程 + 充电 | 🚧 下一步 |
 | P3 | 统计：物化视图、电池健康、停放掉电 | ⬜ |
 | P4 | 认证、PWA、Docker 镜像、群晖部署文档 | ⬜ |
 | P5 | 轨迹回放、多车 | ⬜ |
