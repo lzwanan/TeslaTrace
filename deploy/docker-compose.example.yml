@@ -8,6 +8,11 @@
 services:
   teslatrace:
     image: ghcr.io/lzwanan/teslatrace:latest
+    # Build from this repository until a published image exists:
+    #   docker compose -f docker-compose.example.yml up -d --build
+    build:
+      context: ..
+      dockerfile: Dockerfile
     container_name: teslatrace
     restart: unless-stopped
     environment:

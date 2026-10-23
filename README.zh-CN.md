@@ -15,9 +15,9 @@
 
 </div>
 
-> ### 当前状态：设计预览
-> 上面的截图来自一个**可直接运行的交互原型** —— 用浏览器打开 [`demo/index.html`](demo/index.html) 即可，无需构建、无依赖。
-> FastAPI 后端与 React 前端正在开发中，**暂不可用于生产**。
+> ### 当前状态：早期 alpha
+> 后端与前端都能跑，且是接真实 TeslaMate 数据库跑的：MQTT 实时状态、概览看板、行程列表都已可用。统计页、PWA、认证加固是下一步。
+> 上面的截图来自 [`demo/`](demo/index.html) 里的原型 —— 界面就是按它实现的，浏览器打开即可看。
 
 ---
 
@@ -31,7 +31,7 @@ TeslaTrace 补的是另一半：
 - **数值优先于图表** —— 大号数字 + 单位 + 一句上下文；图表放下一屏，用来解释数字。
 - **状态必须可解释** —— 车休眠时 TeslaMate 本就不采集。每个值都标注它多久没更新了，免得"数字冻住"被当成 bug。
 
-## 会做什么
+## 功能
 
 | 模块 | 内容 |
 |---|---|
@@ -71,9 +71,8 @@ TeslaMate ──► PostgreSQL 17 ─┐
 
 ```bash
 git clone https://github.com/lzwanan/TeslaTrace && cd TeslaTrace/deploy
-cp .env.example .env          # 把 TeslaMate compose 里的 DATABASE_PASS 填进去
-docker build -t ghcr.io/lzwanan/teslatrace:latest ../backend   # 镜像发布前先本地构建
-docker compose -f docker-compose.example.yml up -d
+cp .env.example .env                                    # 填入 DATABASE_PASS
+docker compose -f docker-compose.example.yml up -d --build
 ```
 
 它会直接接入 TeslaMate 现有的 Docker 网络，所以 PostgreSQL 和 Mosquitto 都不用对外映射端口。然后：
@@ -124,10 +123,27 @@ GET /api/v1/stream            SSE：先一帧快照，之后每次变化推一�
 |---|---|---|
 | P0 | 设计系统、卡片注册表、断点布局 | ✅ 原型完成 |
 | P1 | FastAPI：只读库、MQTT→SSE、`/api/v1/summary`、`/drives`、健康检查 | ✅ 完成 |
-| P2 | React 应用：概览 + 行程 + 充电 | 🚧 下一步 |
-| P3 | 统计：物化视图、电池健康、停放掉电 | ⬜ |
+| P2 | React 应用：概览、行程、卡片注册表、中英切换、明暗主题 | ✅ 完成 |
+| P3 | 统计：物化视图、电池健康、停放掉电 | 🚧 下一步 |
 | P4 | 认证、PWA、Docker 镜像、群晖部署文档 | ⬜ |
 | P5 | 轨迹回放、多车 | ⬜ |
+
+## 开发
+
+两个进程，中间不需要任何配置 —— Vite 会把 `/api` 代理到后端：
+
+```bash
+# 终端 1
+cd backend && pip install -e ".[dev]"
+DATABASE_PASS=... python -m app          # http://localhost:8000
+
+# 终端 2
+cd frontend && npm install && npm run dev  # http://localhost:5173
+```
+
+`npm run build` 会先做类型检查再输出 `frontend/dist`，Docker 镜像把它拷进 Python 包，由 FastAPI 直接托管。
+
+界面默认中文，顶栏一键切英文（选择会记住）。文案集中在 `frontend/src/lib/i18n.tsx`，加一门语言只是再加一本字典。
 
 ## 设计决策
 

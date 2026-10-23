@@ -6,6 +6,8 @@ venv/
 *.egg-info/
 build/
 dist/
+backend/app/static/
+frontend/dist/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
