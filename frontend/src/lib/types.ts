@@ -72,3 +72,27 @@ export type Summary = {
 };
 
 export type DrivesPage = { car_id: number; drives: Drive[] };
+
+export type StatsMonth = {
+  month: string;
+  km: number;
+  drives: number;
+  kwh: number;
+  cost: number | null;
+  cost_per_km: number | null;
+  sessions: number;
+  costed: number;
+};
+
+export type Stats = {
+  months: StatsMonth[];
+  battery: { capacity_kwh: number | null; samples: number; rated_range_km: number | null };
+  totals: {
+    km: number;
+    kwh: number;
+    cost: number;
+    costed: number;
+    drives: number;
+    sessions: number;
+  };
+};

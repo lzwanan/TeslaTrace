@@ -20,6 +20,7 @@ import {
 const en = {
   "nav.overview": "Overview",
   "nav.drives": "Drives",
+  "nav.insights": "Insights",
 
   "state.charging": "Charging",
   "state.driving": "Driving",
@@ -45,6 +46,10 @@ const en = {
   "card.charging": "Charging",
   "card.recent": "Recent drives",
   "card.attention": "Needs attention",
+  "card.monthlyKm": "Distance by month",
+  "card.monthlyCost": "Cost by month",
+  "card.totals": "Last {n} months",
+  "card.capacity": "Battery capacity",
 
   "pos.open": "Open in maps",
   "pos.unknown": "Unknown place",
@@ -73,6 +78,14 @@ const en = {
   "chg.notPlugged": "Not plugged in",
   "chg.complete": "Charge complete",
   "chg.toFull": "To full",
+  "stats.perKm": "per km",
+  "stats.kwh": "Charged",
+  "stats.cost": "Cost",
+  "stats.sessions": "{n} sessions",
+  "stats.samples": "from {n} large charges",
+  "stats.ratedRange": "Range at 100%",
+  "stats.noCost": "No tariff configured",
+  "stats.current": "This month",
 
   "alert.lowBattery": "Battery below 20%",
   "alert.unlocked": "Car is unlocked",
@@ -114,6 +127,7 @@ export type TKey = keyof Dict;
 const zh: Record<TKey, string> = {
   "nav.overview": "概览",
   "nav.drives": "行程",
+  "nav.insights": "统计",
 
   "state.charging": "充电中",
   "state.driving": "行驶中",
@@ -139,6 +153,10 @@ const zh: Record<TKey, string> = {
   "card.charging": "充电",
   "card.recent": "最近行程",
   "card.attention": "需要留意",
+  "card.monthlyKm": "月度里程",
+  "card.monthlyCost": "月度电费",
+  "card.totals": "近 {n} 个月",
+  "card.capacity": "电池容量",
 
   "pos.open": "在地图中打开",
   "pos.unknown": "未知位置",
@@ -167,6 +185,14 @@ const zh: Record<TKey, string> = {
   "chg.notPlugged": "未插枪",
   "chg.complete": "已充满",
   "chg.toFull": "距充满",
+  "stats.perKm": "每公里",
+  "stats.kwh": "充电量",
+  "stats.cost": "电费",
+  "stats.sessions": "{n} 次充电",
+  "stats.samples": "取自 {n} 次大额充电",
+  "stats.ratedRange": "满电续航",
+  "stats.noCost": "未配置电价",
+  "stats.current": "本月",
 
   "alert.lowBattery": "电量低于 20%",
   "alert.unlocked": "车辆未上锁",

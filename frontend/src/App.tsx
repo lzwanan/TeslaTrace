@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Gauge, Moon, Route, Sun } from "lucide-react";
+import { Gauge, Moon, Route, Sun, TrendingUp } from "lucide-react";
 
 import { StatePill, humanAge } from "./components/StatePill";
 import { Skeleton } from "./components/ui";
@@ -9,10 +9,13 @@ import { useI18n } from "./lib/i18n";
 import { useNow, useSummaryStream } from "./lib/live";
 import type { Car } from "./lib/types";
 import { Drives } from "./pages/Drives";
+import { Insights } from "./pages/Insights";
 import { Overview } from "./pages/Overview";
 
-type Route = "overview" | "drives";
-const ROUTES: Route[] = ["overview", "drives"];
+type Route = "overview" | "drives" | "insights";
+const ROUTES: Route[] = ["overview", "drives", "insights"];
+
+const ROUTE_ICON = { overview: Gauge, drives: Route, insights: TrendingUp } as const;
 
 export function App() {
   const { t, lang, setLang } = useI18n();
@@ -100,7 +103,10 @@ export function App() {
               href={`#/${item}`}
               aria-current={route === item ? "page" : undefined}
             >
-              {item === "overview" ? <Gauge size={18} /> : <Route size={18} />}
+              {(() => {
+                const Icon = ROUTE_ICON[item];
+                return <Icon size={18} />;
+              })()}
               {t(`nav.${item}`)}
             </a>
           ))}
@@ -154,8 +160,10 @@ export function App() {
             {summary ? (
               route === "overview" ? (
                 <Overview summary={summary} />
-              ) : (
+              ) : route === "drives" ? (
                 <Drives summary={summary} />
+              ) : (
+                <Insights summary={summary} />
               )
             ) : (
               <LoadingGrid />
@@ -171,7 +179,10 @@ export function App() {
                 aria-current={route === item ? "page" : undefined}
                 style={{ textDecoration: "none" }}
               >
-                {item === "overview" ? <Gauge size={21} /> : <Route size={21} />}
+                {(() => {
+                  const Icon = ROUTE_ICON[item];
+                  return <Icon size={21} />;
+                })()}
                 <span>{t(`nav.${item}`)}</span>
               </a>
             ))}

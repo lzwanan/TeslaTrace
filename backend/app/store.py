@@ -17,7 +17,7 @@ from typing import Any
 
 from psycopg_pool import AsyncConnectionPool
 
-from .timeutil import day_start, month_start, to_naive_utc
+from .timeutil import day_start, month_keys, month_start, months_back, to_naive_utc
 
 _SQL_DIR = Path(__file__).with_name("sql")
 
@@ -66,6 +66,56 @@ class Store:
     async def last_position(self, car_id: int) -> dict[str, Any] | None:
         rows = await self._all("last_position", {"car_id": car_id})
         return rows[0] if rows else None
+
+    async def stats(self, car_id: int, tz, months: int = 6, now: datetime | None = None) -> dict[str, Any]:
+        """Monthly distance and energy, plus a battery estimate from charge sessions."""
+        now = now or datetime.now(UTC)
+        params = {"car_id": car_id, "since": months_back(now, tz, months), "tz": str(tz)}
+        drives, charges, battery = (
+            await self._all("monthly_drives", params),
+            await self._all("monthly_charges", params),
+            (await self._all("battery", {"car_id": car_id}))[0],
+        )
+
+        by_month = {
+            key: {"month": key, "km": 0.0, "drives": 0, "kwh": 0.0, "cost": None, "sessions": 0, "costed": 0}
+            for key in month_keys(now, tz, months)
+        }
+        for row in drives:
+            entry = by_month.get(row["month"])
+            if entry is not None:
+                entry["km"], entry["drives"] = row["km"], row["drives"]
+        for row in charges:
+            entry = by_month.get(row["month"])
+            if entry is not None:
+                entry["kwh"], entry["cost"] = row["kwh"], row["cost"]
+                entry["sessions"], entry["costed"] = row["sessions"], row["costed"]
+
+        series = []
+        for entry in by_month.values():
+            km, cost = entry["km"], entry["cost"]
+            # Cost per kilometre, not Wh/km: this ratio divides *charged* energy by
+            # distance, so charging losses and parked drain would inflate an energy
+            # figure and make it impossible to compare with the car's own number.
+            entry["cost_per_km"] = round(cost / km, 3) if km and cost else None
+            series.append(entry)
+
+        return {
+            "months": series,
+            "battery": {
+                "capacity_kwh": battery.get("capacity_kwh"),
+                "samples": battery.get("samples") or 0,
+                "rated_range_km": battery.get("rated_range_km"),
+            },
+            "totals": {
+                "km": round(sum(item["km"] for item in series), 1),
+                "kwh": round(sum(item["kwh"] for item in series), 1),
+                "cost": round(sum(item["cost"] or 0 for item in series), 2),
+                "costed": sum(item["costed"] for item in series),
+                "drives": sum(item["drives"] for item in series),
+                "sessions": sum(item["sessions"] for item in series),
+            },
+        }
 
     async def healthy(self) -> bool:
         try:
