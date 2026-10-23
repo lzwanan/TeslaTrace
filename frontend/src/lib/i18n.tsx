@@ -50,6 +50,8 @@ const en = {
   "card.monthlyCost": "Cost by month",
   "card.totals": "Last {n} months",
   "card.capacity": "Battery capacity",
+  "card.climate": "Climate today",
+  "card.climateHint": "Camp mode and preconditioning run on parked energy",
 
   "pos.open": "Open in maps",
   "pos.unknown": "Unknown place",
@@ -58,6 +60,7 @@ const en = {
   "kpi.battery": "Battery",
   "kpi.elevation": "Altitude",
   "kpi.speed": "Speed",
+  "kpi.climate": "Climate on",
   "kpi.km": "km",
   "kpi.drives": "drives",
   "kpi.odometer": "Odometer",
@@ -86,6 +89,7 @@ const en = {
   "stats.ratedRange": "Range at 100%",
   "stats.noCost": "No tariff configured",
   "stats.current": "This month",
+  "stats.includesParked": "Includes parked use: climate, camp mode and standby drain",
 
   "alert.lowBattery": "Battery below 20%",
   "alert.unlocked": "Car is unlocked",
@@ -157,6 +161,8 @@ const zh: Record<TKey, string> = {
   "card.monthlyCost": "月度电费",
   "card.totals": "近 {n} 个月",
   "card.capacity": "电池容量",
+  "card.climate": "今日空调",
+  "card.climateHint": "露营模式与提前开空调都算驻车用电",
 
   "pos.open": "在地图中打开",
   "pos.unknown": "未知位置",
@@ -165,6 +171,7 @@ const zh: Record<TKey, string> = {
   "kpi.battery": "当前电量",
   "kpi.elevation": "海拔",
   "kpi.speed": "速度",
+  "kpi.climate": "空调开启",
   "kpi.km": "公里",
   "kpi.drives": "趟",
   "kpi.odometer": "总里程",
@@ -193,6 +200,7 @@ const zh: Record<TKey, string> = {
   "stats.ratedRange": "满电续航",
   "stats.noCost": "未配置电价",
   "stats.current": "本月",
+  "stats.includesParked": "含驻车用电：空调、露营模式与静置耗电",
 
   "alert.lowBattery": "电量低于 20%",
   "alert.unlocked": "车辆未上锁",

@@ -68,6 +68,7 @@ export type Summary = {
   car: Car;
   live: LiveState;
   driving: Driving;
+  climate: { hours_today: number };
   recent_drives: Drive[];
 };
 

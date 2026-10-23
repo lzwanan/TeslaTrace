@@ -58,6 +58,9 @@ class FakeStore:
             }
         ][:limit]
 
+    async def climate_hours(self, car_id, since):
+        return 2.75
+
     async def last_position(self, car_id):
         return self._position
 
@@ -149,6 +152,7 @@ def test_summary_prefers_mqtt_state():
     assert body["live"]["battery_level"] == 72.0
     assert body["live"]["state"] == "charging"
     assert body["driving"]["today_km"] == 42.6
+    assert body["climate"] == {"hours_today": 2.75}
     assert body["car"]["label"] == "初号机"
     assert len(body["recent_drives"]) == 1
 

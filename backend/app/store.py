@@ -67,6 +67,10 @@ class Store:
         rows = await self._all("last_position", {"car_id": car_id})
         return rows[0] if rows else None
 
+    async def climate_hours(self, car_id: int, since: datetime) -> float:
+        rows = await self._all("climate_today", {"car_id": car_id, "since": to_naive_utc(since)})
+        return round(rows[0]["hours"], 2) if rows else 0.0
+
     async def stats(self, car_id: int, tz, months: int = 6, now: datetime | None = None) -> dict[str, Any]:
         """Monthly distance and energy, plus a battery estimate from charge sessions."""
         now = now or datetime.now(UTC)
