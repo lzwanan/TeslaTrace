@@ -67,6 +67,43 @@ class Store:
         rows = await self._all("last_position", {"car_id": car_id})
         return rows[0] if rows else None
 
+    async def extras(self, car_id: int, tz) -> dict[str, Any]:
+        """Yearly totals, charging habits, driving habits and frequent places.
+
+        Four queries on small tables (drives 3.6k rows, charging 500 rows). The
+        insights page composes these with `stats` so it still costs one round trip.
+        """
+        params = {"car_id": car_id, "tz": str(tz)}
+        yearly, charging, habits, places = (
+            await self._all("yearly", params),
+            (await self._all("charging_profile", params))[0],
+            (await self._all("habits", params))[0],
+            await self._all("places", params),
+        )
+        return {
+            "yearly": yearly,
+            "charging": {
+                "sessions": charging["sessions"] or 0,
+                "avg_kw": charging["avg_kw"],
+                "avg_minutes": charging["avg_minutes"],
+                "max_kwh": charging["max_kwh"],
+                # Distribution of what the pack was charged to, and when charging began.
+                "levels": [
+                    {"key": "full", "value": charging["full"]},
+                    {"key": "to90", "value": charging["to90"]},
+                    {"key": "to80", "value": charging["to80"]},
+                    {"key": "below80", "value": charging["below80"]},
+                ],
+                "hours": [
+                    {"key": "night", "value": charging["night"]},
+                    {"key": "day", "value": charging["day"]},
+                    {"key": "evening", "value": charging["evening"]},
+                ],
+            },
+            "habits": {k: habits[k] for k in habits},
+            "places": places,
+        }
+
     async def climate_hours(self, car_id: int, since: datetime) -> float:
         rows = await self._all("climate_today", {"car_id": car_id, "since": to_naive_utc(since)})
         return round(rows[0]["hours"], 2) if rows else 0.0

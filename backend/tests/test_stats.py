@@ -89,3 +89,32 @@ async def test_battery_is_passed_through(monkeypatch):
 
     assert result["battery"] == {"capacity_kwh": 56.0, "samples": 12, "rated_range_km": 412.0}
     assert result["totals"]["km"] == 0.0
+
+
+async def test_extras_assembles_the_four_blocks(monkeypatch):
+    store = Store(pool=None)
+
+    async def fake_all(name, params):
+        if name == "yearly":
+            return [{"year": 2026, "drives": 1027, "km": 13242.0, "avg_km": 12.9,
+                     "longest_km": 218.8, "sessions": 155, "kwh": 3559.0, "cost": 1344.0, "costed": 142}]
+        if name == "charging_profile":
+            return [{"sessions": 470, "avg_kw": 22.2, "avg_minutes": 176, "max_kwh": 55.2,
+                     "full": 373, "to90": 39, "to80": 14, "below80": 44,
+                     "night": 93, "day": 110, "evening": 267}]
+        if name == "habits":
+            return [{"drives": 3589, "avg_kmh": 46.0, "avg_minutes": 22, "avg_km": 16.8,
+                     "longest_km": 358.3, "days_used": 848, "night_drives": 371,
+                     "short_drives": 1498, "busiest_day_km": 1322.1}]
+        return [{"name": "湖景花园", "visits": 407}]
+
+    monkeypatch.setattr(store, "_all", fake_all)
+    data = await store.extras(1, SHANGHAI)
+
+    assert data["yearly"][0]["year"] == 2026
+    # Distributions keep a stable key order so the UI can render labels from them.
+    assert [item["key"] for item in data["charging"]["levels"]] == ["full", "to90", "to80", "below80"]
+    assert [item["key"] for item in data["charging"]["hours"]] == ["night", "day", "evening"]
+    assert data["charging"]["levels"][0]["value"] == 373
+    assert data["habits"]["short_drives"] == 1498
+    assert data["places"][0] == {"name": "湖景花园", "visits": 407}

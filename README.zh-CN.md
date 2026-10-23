@@ -38,7 +38,7 @@ TeslaTrace 补的是另一半：
 | 实时 | 状态胶囊（充电中 / 行驶中 / 在线 / **已休眠 42 分钟**）、电量环、续航、充电功率、预计充满、实时位置 |
 | 行程 | 行程列表 + 轨迹地图、单趟能耗与电费、轨迹回放（规划中） |
 | 充电 | 充电记录、SOC 曲线、分时电价计费、家充与超充占比 |
-| 统计 | 月度里程与电费、每公里成本、由充电记录反推的可用电池容量 |
+| 统计 | 月度与年度里程电费、每公里成本、电池容量、充电与驾驶习惯、常去地点 |
 | 平台 | 390px–1440px 全响应式、可安装 PWA、明暗双主题 |
 
 **刻意不做**：原始电流/电压曲线、逐点 GPS 列表、车辆配置项。这些属于 Grafana 的职责。
@@ -114,7 +114,7 @@ GET /api/v1/cars              这个 TeslaMate 库里的所有车
 GET /api/v1/live              当前状态（优先 MQTT，冷启动回退到最新位置）
 GET /api/v1/summary           首页所需内容，一次请求拿全
 GET /api/v1/drives?limit=20   行程列表，游标分页
-GET /api/v1/stats?months=6    月度里程、电费与电池容量估算
+GET /api/v1/stats?months=6    月度/年度里程与电费、电池容量、充电与驾驶习惯
 GET /api/v1/stream            SSE：先一帧快照，之后每次变化推一帧
 ```
 
@@ -145,6 +145,8 @@ cd frontend && npm install && npm run dev  # http://localhost:5173
 `npm run build` 会先做类型检查再输出 `frontend/dist`，Docker 镜像把它拷进 Python 包，由 FastAPI 直接托管。
 
 界面默认中文，顶栏一键切英文（选择会记住）。文案集中在 `frontend/src/lib/i18n.tsx`，加一门语言只是再加一本字典。
+
+各项指标的可行性实测见 [`docs/metrics.md`](docs/metrics.md)（哪些便宜、实测多少、哪些被否以及原因）。
 
 ## 已知限制
 

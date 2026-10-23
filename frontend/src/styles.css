@@ -1037,3 +1037,89 @@ body {
   white-space: nowrap;
   overflow: hidden;
 }
+
+/* Compact table for the yearly comparison. */
+.table {
+  display: flex;
+  flex-direction: column;
+}
+.table-row {
+  display: grid;
+  grid-template-columns: 0.7fr 1.2fr 1fr 0.9fr 0.9fr;
+  gap: 8px;
+  padding: 7px 0;
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+}
+.table-row:first-child {
+  border-top: 0;
+}
+.table-row.head {
+  color: var(--t3);
+  font-size: 10.5px;
+  padding-bottom: 4px;
+}
+.table-row span:not(:first-child) {
+  text-align: right;
+}
+.table-row.head span:first-child {
+  text-align: left;
+}
+.table-row .num {
+  font-variant-numeric: tabular-nums;
+}
+.ytd {
+  font-style: normal;
+  font-size: 9.5px;
+  color: var(--t3);
+  margin-left: 4px;
+}
+
+/* Horizontal distribution list, reused by charging habits and frequent places. */
+.dist-title {
+  font-size: 11px;
+  color: var(--t3);
+  margin-bottom: 2px;
+}
+.dist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 12px;
+}
+.dist .label {
+  width: 78px;
+  flex: none;
+  color: var(--t2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dist .dbar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--track);
+  overflow: hidden;
+}
+.dist .dbar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--red);
+  opacity: 0.85;
+}
+.dist em {
+  font-style: normal;
+  flex: none;
+  width: 34px;
+  text-align: right;
+  color: var(--t3);
+  font-variant-numeric: tabular-nums;
+}

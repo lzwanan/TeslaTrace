@@ -122,7 +122,7 @@ GET /api/v1/cars              every car in this TeslaMate database
 GET /api/v1/live              current state (MQTT first, newest position as fallback)
 GET /api/v1/summary           the whole home screen in one request
 GET /api/v1/drives?limit=20   trip list, keyset paginated
-GET /api/v1/stats?months=6    monthly distance, cost and battery estimate
+GET /api/v1/stats?months=6    monthly + yearly totals, cost, battery, charging and driving habits
 GET /api/v1/stream            SSE: one snapshot, then a frame per change
 ```
 
@@ -154,6 +154,8 @@ cd frontend && npm install && npm run dev  # http://localhost:5173
 `npm run build` type-checks and emits `frontend/dist`; the Docker image copies that into the Python package and FastAPI serves it from `/`.
 
 The interface is Chinese by default and switches to English with one click in the header (the choice is remembered). Strings live in `frontend/src/lib/i18n.tsx` — adding a language there is a matter of one more dictionary.
+
+See [`docs/metrics.md`](docs/metrics.md) for the metric-by-metric feasibility notes (what is cheap, what was measured, what was rejected and why).
 
 ## Known limitations
 
