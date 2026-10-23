@@ -103,3 +103,28 @@ TeslaTrace 是独立的社区项目，**与 Tesla, Inc. 无任何关联，未获
 ## 许可证
 
 [MIT](LICENSE)
+
+---
+
+## 支持项目
+
+TeslaTrace 免费，以后也免费。如果它帮你省下了某个订阅费，或者省掉一个折腾的周末，可以请我喝杯咖啡 —— 完全自愿，都很感谢。
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/sponsor/wechat-pay.jpg"><img src="docs/sponsor/wechat-pay.jpg" height="320" alt="微信收款码"></a><br>
+      <sub><b>微信收款</b></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/sponsor/alipay.jpg"><img src="docs/sponsor/alipay.jpg" height="320" alt="支付宝收款码"></a><br>
+      <sub><b>支付宝</b></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/sponsor/wechat-reward.jpg"><img src="docs/sponsor/wechat-reward.jpg" height="320" alt="微信赞赏码"></a><br>
+      <sub><b>微信赞赏</b></sub>
+    </td>
+  </tr>
+</table>
+
+<sub>用微信或支付宝扫码，点击可查看原图。</sub>

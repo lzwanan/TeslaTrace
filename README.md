@@ -111,3 +111,28 @@ TeslaTrace is an independent community project. It is **not affiliated with, end
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## Support
+
+TeslaTrace is free, and it will stay free. If it saved you a subscription elsewhere — or just a weekend of yak-shaving — you can buy me a coffee. Never required, always appreciated.
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/sponsor/wechat-pay.jpg"><img src="docs/sponsor/wechat-pay.jpg" height="320" alt="WeChat Pay"></a><br>
+      <sub><b>WeChat Pay</b></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/sponsor/alipay.jpg"><img src="docs/sponsor/alipay.jpg" height="320" alt="Alipay"></a><br>
+      <sub><b>Alipay</b></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/sponsor/wechat-reward.jpg"><img src="docs/sponsor/wechat-reward.jpg" height="320" alt="WeChat Reward"></a><br>
+      <sub><b>WeChat Reward</b></sub>
+    </td>
+  </tr>
+</table>
+
+<sub>Scan with WeChat or Alipay. Click a code to open it full size.</sub>
