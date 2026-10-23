@@ -7,6 +7,7 @@ syntax (via sqlglot's postgres dialect) and the query-shape rules that keep a
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,21 @@ import sqlglot
 
 SQL_DIR = Path(__file__).resolve().parent.parent / "app" / "sql"
 FILES = sorted(SQL_DIR.glob("*.sql"))
+
+PLACEHOLDER = re.compile(r"%\(\w+\)s")
+
+# The only query that is not scoped to a car: it lists them.
+UNSCOPED = {"cars.sql"}
+
+
+def parseable(sql: str) -> str:
+    """`%(name)s` is psycopg's syntax, not SQL.
+
+    sqlglot reads it as a modulo expression and, depending on the version, either
+    tolerates it or fails outright — which is how this test spent several commits
+    passing locally against a newer sqlglot while CI failed on every file.
+    """
+    return PLACEHOLDER.sub("NULL", sql)
 
 
 def test_sql_files_exist():
@@ -27,7 +43,16 @@ def test_sql_files_exist():
 
 @pytest.mark.parametrize("path", FILES, ids=lambda p: p.name)
 def test_sql_parses_as_postgres(path: Path):
-    sqlglot.parse(path.read_text(encoding="utf-8"), read="postgres")
+    sqlglot.parse(parseable(path.read_text(encoding="utf-8")), read="postgres")
+
+
+@pytest.mark.parametrize("path", FILES, ids=lambda p: p.name)
+def test_every_file_uses_bound_parameters(path: Path):
+    """A literal car id or limit in the SQL would defeat the placeholder check above."""
+    if path.name in UNSCOPED:
+        return
+    assert PLACEHOLDER.search(path.read_text(encoding="utf-8")), path.name
+
 
 
 @pytest.mark.parametrize("name", ["last_position.sql", "recent_drives.sql", "driving_stats.sql"])
