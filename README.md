@@ -155,6 +155,12 @@ cd frontend && npm install && npm run dev  # http://localhost:5173
 
 The interface is Chinese by default and switches to English with one click in the header (the choice is remembered). Strings live in `frontend/src/lib/i18n.tsx` — adding a language there is a matter of one more dictionary.
 
+## Known limitations
+
+- **Parked energy cannot be attributed.** While the car is parked TeslaMate records essentially no power in `positions` — measured −14 W to +2 W during a camp-mode session that actually draws 500–1500 W. So a cost-per-kilometre figure derived from charge sessions includes climate, camp mode and standby drain, and reads higher than the consumption the car reports about itself. Splitting the two needs a full scan of `positions`: 1.1 s for one month, 6.8 s for six. Too slow for a page, and not worth a materialized view for a number you look at once a month.
+- **Cost is only as good as the tariff.** TeslaMate stores a price per session only when a tariff or a manual entry exists; on the reference database that is 357 of 501 sessions. Missing prices stay `null` rather than becoming zero.
+- **One token, no users.** `AUTH_TOKEN` is a single shared secret. Fine behind a reverse proxy that already authenticates you; not a multi-user system.
+
 ## Design decisions
 
 The prototype in [`demo/`](demo/) is the design baseline, and [`demo/README.md`](demo/README.md) explains it. Two choices worth knowing up front:

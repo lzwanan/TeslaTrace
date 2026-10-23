@@ -12,6 +12,7 @@ import type { Span } from "../components/ui";
 import type { Summary } from "../lib/types";
 import { AlertCard, alertKeys } from "./AlertCard";
 import { ChargingCard } from "./ChargingCard";
+import { CLIMATE_THRESHOLD_HOURS, ClimateCard } from "./ClimateCard";
 import { LiveCard } from "./LiveCard";
 import { PositionCard } from "./PositionCard";
 import { RecentDrivesCard } from "./RecentDrivesCard";
@@ -49,6 +50,13 @@ export const OVERVIEW_CARDS: CardDef[] = [
   { id: "month", span: "kpi", cols: 3, Component: MonthCard },
   { id: "battery", span: "kpi", cols: 3, Component: BatteryCard },
   { id: "vehicle", span: "kpi", cols: 3, Component: VehicleCard },
+  {
+    id: "climate",
+    span: "half",
+    cols: 4,
+    visible: (summary) => summary.climate.hours_today >= CLIMATE_THRESHOLD_HOURS,
+    Component: ClimateCard,
+  },
   { id: "charging", span: "half", cols: 4, Component: ChargingCard },
   { id: "recent", span: "full", cols: 8, Component: RecentDrivesCard },
 ];

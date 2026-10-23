@@ -1,10 +1,20 @@
-/** The hero: state of charge, range, where the car is. One screen, three answers. */
+/**
+ * The hero: state of charge, range, where the car is. One screen, three answers.
+ *
+ * The third line doubles as a climate indicator. Camp mode is why a parked car
+ * still draws power, and TeslaMate cannot attribute that energy afterwards (the
+ * vehicle reports ~0 W while parked), so at least the state is visible live.
+ */
+
+import { Fan } from "lucide-react";
 
 import { Ring } from "../components/Ring";
 import { stateTone } from "../components/StatePill";
 import { Card } from "../components/ui";
 import { num } from "../lib/format";
 import { useI18n } from "../lib/i18n";
+import type { CSSProperties } from "react";
+
 import type { Summary } from "../lib/types";
 
 export function LiveCard({ summary }: { summary: Summary }) {
@@ -35,7 +45,15 @@ export function LiveCard({ summary }: { summary: Summary }) {
           <div className="hero-sub">
             {live.geofence ? t("hero.parked", { place: live.geofence }) : t("hero.nowhere")}
           </div>
-          <div className="hero-sub dim">{car.label}</div>
+          {live.is_climate_on ? (
+            <span className="pill" style={{ "--tone": "var(--blue)", height: 24, fontSize: 11 } as CSSProperties}>
+              <Fan size={13} style={{ marginLeft: -2 }} />
+              {t("kpi.climate")}
+              {live.inside_temp != null ? ` · ${num(live.inside_temp, 1)}°C` : ""}
+            </span>
+          ) : (
+            <div className="hero-sub dim">{car.label}</div>
+          )}
         </div>
       </div>
 

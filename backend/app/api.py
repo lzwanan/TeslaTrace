@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import secrets
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import orjson
@@ -20,7 +20,7 @@ from sse_starlette.sse import EventSourceResponse
 from .events import Hub
 from .live import LiveRegistry
 from .store import Store
-from .timeutil import as_utc
+from .timeutil import as_utc, day_start
 
 log = logging.getLogger(__name__)
 
@@ -129,14 +129,17 @@ def router() -> APIRouter:
         store = _store(request)
         car = await _pick_car(request, car_id)
 
+        tz = _tz(_settings(request))
         live_row = await _live_payload(request, car["id"])
-        driving = await store.driving_stats(car["id"], _tz(_settings(request)))
+        driving = await store.driving_stats(car["id"], tz)
+        climate_hours = await store.climate_hours(car["id"], day_start(datetime.now(UTC), tz))
         drives = await store.recent_drives(car["id"], limit=3)
 
         return {
             "car": {**car, "label": _car_label(car), "vin_suffix": (car.get("vin") or "")[-5:]},
             "live": live_row,
             "driving": driving,
+            "climate": {"hours_today": climate_hours},
             "recent_drives": [_drive_row(d) for d in drives],
         }
 

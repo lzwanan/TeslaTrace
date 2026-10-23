@@ -113,7 +113,7 @@ export function Insights({ summary }: { summary: Summary }) {
           <Empty title={t("stats.noCost")} />
         )}
         <div className="note">
-          {hasCost && perKm ? `${t("stats.perKm")} ¥${num(perKm, 2)}` : t("stats.noCost")}
+          {hasCost && perKm ? `${t("stats.perKm")} ¥${num(perKm, 2)} · ${t("stats.includesParked")}` : t("stats.noCost")}
         </div>
       </Card>
 
