@@ -1,0 +1,991 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Tokens. One palette, two modes. Every surface is built from these, so a theme
+   change never needs a component change.
+   --------------------------------------------------------------------------- */
+:root {
+  --r-card: 16px;
+  --r-pill: 999px;
+  --gap: 12px;
+  --font:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei",
+    system-ui, sans-serif;
+}
+
+html[data-theme="dark"] {
+  --bg: #0a0e13;
+  --bg2: #0d1218;
+  --card: #141a22;
+  --card2: #1a222c;
+  --line: rgba(255, 255, 255, 0.07);
+  --line2: rgba(255, 255, 255, 0.13);
+  --t1: #f5f7fa;
+  --t2: #9aa4b2;
+  --t3: #6c7684;
+  --red: #ff3b4e;
+  --green: #22c55e;
+  --blue: #4c8dff;
+  --amber: #f59e0b;
+  --track: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="light"] {
+  --bg: #eff2f5;
+  --bg2: #ffffff;
+  --card: #ffffff;
+  --card2: #f6f8fa;
+  --line: rgba(9, 15, 25, 0.07);
+  --line2: rgba(9, 15, 25, 0.13);
+  --t1: #0b0f14;
+  --t2: #5a6472;
+  --t3: #8b95a3;
+  --red: #d3122e;
+  --green: #16a34a;
+  --blue: #2563eb;
+  --amber: #d97706;
+  --track: rgba(9, 15, 25, 0.07);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers must not reflow while they change. */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ---------------------------------------------------------------------------
+   Shell. Container queries, not media queries: the layout reacts to how much room
+   the app actually has, so the same code works full-screen or embedded.
+   --------------------------------------------------------------------------- */
+.shell {
+  height: 100%;
+  container-type: inline-size;
+  container-name: app;
+  background: var(--bg);
+  display: flex;
+  justify-content: center;
+}
+
+.app {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.side {
+  display: none;
+}
+
+@container app (min-width: 1024px) {
+  .app {
+    flex-direction: row;
+  }
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 210px;
+    flex: none;
+    padding: 18px 12px;
+    border-right: 1px solid var(--line);
+    background: var(--bg2);
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 2px 10px 18px;
+}
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--red);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  flex: none;
+}
+.brand-name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.brand-sub {
+  font-size: 11px;
+  color: var(--t3);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--t2);
+  font-size: 13.5px;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+  transition:
+    background 0.14s,
+    color 0.14s;
+}
+.nav-item:hover {
+  background: var(--card);
+  color: var(--t1);
+}
+.nav-item[aria-current="page"] {
+  background: var(--card);
+  color: var(--t1);
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.nav-item[aria-current="page"] svg {
+  color: var(--red);
+}
+
+.side-foot {
+  margin-top: auto;
+  padding: 12px 12px 2px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--t3);
+  line-height: 1.7;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 10px;
+}
+@container app (min-width: 640px) {
+  .topbar {
+    padding: 18px 22px 12px;
+  }
+}
+
+.title {
+  min-width: 0;
+}
+.title h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.title p {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--t3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--t2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    color 0.14s,
+    border-color 0.14s;
+}
+.icon-btn:hover {
+  color: var(--t1);
+  border-color: var(--line2);
+}
+
+.views {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 16px 18px;
+  -webkit-overflow-scrolling: touch;
+}
+@container app (min-width: 640px) {
+  .views {
+    padding: 0 22px 22px;
+  }
+}
+@container app (min-width: 1024px) {
+  .views {
+    padding: 0 26px 26px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Grid + cards
+
+   Class names are prefixed on purpose: ".grid", ".ring", ".tab" and friends are
+   Tailwind utilities, and a local class with the same name silently inherits the
+   utility's declarations (a stray 1px ring shadow around the charge gauge, for one).
+   --------------------------------------------------------------------------- */
+.cards {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: row dense;
+}
+@container app (min-width: 640px) {
+  .cards {
+    gap: 14px;
+  }
+}
+@container app (min-width: 1024px) {
+  .cards {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+.c-full,
+.c-half {
+  grid-column: span 2;
+}
+.c-kpi {
+  grid-column: span 1;
+}
+@container app (min-width: 640px) {
+  .c-half {
+    grid-column: span 1;
+  }
+}
+@container app (min-width: 1024px) {
+  .c-full {
+    grid-column: span var(--sp, 12);
+  }
+  .c-half {
+    grid-column: span var(--sp, 6);
+  }
+  .c-kpi {
+    grid-column: span var(--sp, 3);
+  }
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+@container app (min-width: 640px) {
+  .card {
+    padding: 18px;
+    border-radius: 18px;
+  }
+}
+
+.cap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--t2);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.cap svg {
+  width: 15px;
+  height: 15px;
+  color: var(--t3);
+  flex: none;
+}
+.cap .aside {
+  margin-left: auto;
+  color: var(--t3);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Hero: charge ring + range
+   --------------------------------------------------------------------------- */
+.hero {
+  padding: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tone, var(--green)) 7%, var(--card)) 0%,
+    var(--card) 62%
+  );
+}
+.hero-in {
+  padding: 18px 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+@container app (min-width: 640px) {
+  .hero-in {
+    padding: 20px 20px 0;
+    gap: 22px;
+  }
+}
+
+.soc {
+  position: relative;
+  width: 122px;
+  height: 122px;
+  flex: none;
+}
+@container app (min-width: 640px) {
+  .soc {
+    width: 140px;
+    height: 140px;
+  }
+}
+.soc svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.soc-track {
+  stroke: var(--track);
+  stroke-width: 9;
+  fill: none;
+}
+.soc-value {
+  stroke: var(--tone, var(--green));
+  stroke-width: 9;
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.6s ease;
+}
+.soc-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.soc-label b {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.soc-label b span {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--t2);
+  margin-left: 1px;
+}
+.soc-label > span {
+  font-size: 10.5px;
+  color: var(--t3);
+  margin-top: 5px;
+}
+
+.hero-meta {
+  min-width: 0;
+  flex: 1;
+}
+.range {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.range b {
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.range > span {
+  font-size: 14px;
+  color: var(--t2);
+  font-weight: 500;
+}
+.range em {
+  font-size: 10.5px;
+  color: var(--t3);
+  margin-left: 5px;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-style: normal;
+}
+.hero-sub {
+  font-size: 12px;
+  color: var(--t2);
+  margin-top: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero-sub.dim {
+  color: var(--t3);
+  margin-top: 4px;
+}
+
+.hero-foot {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+  padding: 13px 16px;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--t1) 2.5%, transparent);
+}
+@container app (min-width: 640px) {
+  .hero-foot {
+    padding: 14px 20px;
+  }
+}
+.hero-foot > div {
+  min-width: 0;
+}
+.hero-foot span {
+  display: block;
+  font-size: 11px;
+  color: var(--t3);
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+.hero-foot b {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.hero-foot b i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--t2);
+  font-weight: 400;
+  margin-left: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+   Small pieces
+   --------------------------------------------------------------------------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px 0 9px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--tone, var(--t2));
+  border: 1px solid color-mix(in srgb, var(--tone, var(--t2)) 30%, transparent);
+  background: color-mix(in srgb, var(--tone, var(--t2)) 12%, transparent);
+}
+.pill i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--t2);
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+.kpi-label svg {
+  width: 15px;
+  height: 15px;
+  color: var(--t3);
+  flex: none;
+}
+.kpi-value {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+@container app (min-width: 1024px) {
+  .kpi-value {
+    font-size: 29px;
+  }
+}
+.kpi-value span {
+  font-size: 11.5px;
+  color: var(--t2);
+  font-weight: 400;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.kpi-note {
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--t3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kpi-note.good {
+  color: var(--green);
+}
+.kpi-note.warn {
+  color: var(--amber);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.drive-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.drive-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+.drive-row:first-child {
+  padding-top: 2px;
+}
+.drive-path {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 0;
+  flex: none;
+}
+.drive-path .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 2px solid var(--t3);
+  flex: none;
+}
+.drive-path .dot.start {
+  border-color: var(--red);
+  background: var(--red);
+}
+.drive-path .dot.end {
+  border-color: var(--t2);
+}
+.drive-path .line {
+  width: 1px;
+  flex: 1;
+  min-height: 14px;
+  background: var(--line2);
+}
+.drive-body {
+  min-width: 0;
+  flex: 1;
+}
+.drive-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  overflow: hidden;
+}
+.drive-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drive-name .arrow {
+  color: var(--t3);
+  font-weight: 400;
+  flex: none;
+}
+.drive-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--t3);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.drive-num {
+  text-align: right;
+  flex: none;
+}
+.drive-num b {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.drive-num b i {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--t2);
+  font-weight: 400;
+  margin-left: 1px;
+}
+.drive-num span {
+  display: block;
+  font-size: 10.5px;
+  color: var(--t3);
+  margin-top: 2px;
+}
+
+.tile {
+  background: var(--card2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  min-width: 0;
+}
+.tile span {
+  display: block;
+  font-size: 10.5px;
+  color: var(--t3);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile b {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tile b i {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--t2);
+  font-weight: 400;
+  margin-left: 1px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--card2) 25%, var(--line) 37%, var(--card2) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 30px 16px;
+  text-align: center;
+  color: var(--t3);
+  font-size: 12px;
+}
+.empty svg {
+  width: 26px;
+  height: 26px;
+  opacity: 0.5;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  background: transparent;
+  color: var(--t1);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.14s,
+    border-color 0.14s;
+}
+.btn:hover {
+  background: var(--card2);
+}
+.btn.primary {
+  background: var(--t1);
+  color: var(--bg);
+  border-color: var(--t1);
+  font-weight: 500;
+}
+.btn.primary:hover {
+  opacity: 0.9;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.field {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  background: var(--card2);
+  color: var(--t1);
+  font: inherit;
+  font-size: 13px;
+}
+.field:focus {
+  outline: 2px solid color-mix(in srgb, var(--red) 45%, transparent);
+  outline-offset: 1px;
+}
+
+/* Bottom navigation, phones and tablets only. */
+.tabbar {
+  display: flex;
+  flex: none;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+@container app (min-width: 1024px) {
+  .tabbar {
+    display: none;
+  }
+}
+.tab {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--t3);
+  font: inherit;
+  font-size: 10.5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 0;
+  cursor: pointer;
+  border-radius: 9px;
+}
+.tab svg {
+  width: 21px;
+  height: 21px;
+}
+.tab[aria-current="page"] {
+  color: var(--t1);
+}
+.tab[aria-current="page"] svg {
+  color: var(--red);
+}
+
+/* Full-page states: token gate, fatal error. */
+.centered {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.panel {
+  width: min(360px, 100%);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+}
+.panel h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.panel p {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: var(--t2);
+  line-height: 1.6;
+}
+.panel form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Segmented control (car switcher) */
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card2);
+}
+.seg button {
+  border: 0;
+  background: transparent;
+  color: var(--t2);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.seg button[aria-pressed="true"] {
+  background: var(--t1);
+  color: var(--bg);
+  font-weight: 500;
+}
+
+/* Large single number inside a card (place name, charging power). */
+.bigstat {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@container app (min-width: 640px) {
+  .bigstat {
+    font-size: 32px;
+  }
+}
+.note {
+  font-size: 11.5px;
+  color: var(--t3);
+  margin-top: 6px;
+  line-height: 1.6;
+}
+.tiles-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Decorative backdrop: a map grid without pretending to be a map. */
+.mapface {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.9;
+  background-image:
+    linear-gradient(var(--line2) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line2) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(150% 110% at 10% 0%, #000 10%, transparent 85%);
+  -webkit-mask-image: radial-gradient(150% 110% at 10% 0%, #000 10%, transparent 85%);
+}
+.z1 {
+  position: relative;
+  z-index: 1;
+}
+
+.alert-card {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--amber) 9%, var(--card)) 0%,
+    var(--card) 70%
+  );
+  border-color: color-mix(in srgb, var(--amber) 35%, transparent);
+}
+.alert-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Two compact variants of the icon button: a word instead of a glyph. */
+.lang-btn,
+.car-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.car-btn {
+  max-width: 104px;
+}
+.car-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

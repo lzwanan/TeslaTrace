@@ -1,0 +1,83 @@
+/** The hero: state of charge, range, where the car is. One screen, three answers. */
+
+import { Ring } from "../components/Ring";
+import { stateTone } from "../components/StatePill";
+import { Card } from "../components/ui";
+import { num } from "../lib/format";
+import { useI18n } from "../lib/i18n";
+import type { Summary } from "../lib/types";
+
+export function LiveCard({ summary }: { summary: Summary }) {
+  const { t } = useI18n();
+  const { live, car } = summary;
+
+  const soc = live.battery_level ?? 0;
+  const range = live.rated_battery_range_km ?? live.est_battery_range_km ?? null;
+  const limit = live.charge_limit_soc ?? null;
+
+  return (
+    <Card span="full" cols={5} className="hero" tone={heroTone(live.state)}>
+      <div className="hero-in">
+        <Ring value={soc} tone={stateTone(live.state)}>
+          <b className="num">
+            {num(soc)}
+            <span>%</span>
+          </b>
+          <span>{limit ? t("hero.target", { n: num(limit) }) : car.label}</span>
+        </Ring>
+
+        <div className="hero-meta">
+          <div className="range">
+            <b className="num">{num(range)}</b>
+            <span>km</span>
+            <em>{t("hero.range")}</em>
+          </div>
+          <div className="hero-sub">
+            {live.geofence ? t("hero.parked", { place: live.geofence }) : t("hero.nowhere")}
+          </div>
+          <div className="hero-sub dim">{car.label}</div>
+        </div>
+      </div>
+
+      <div className="hero-foot">
+        <div>
+          <span>{t("kpi.tempIn")}</span>
+          <b className="num">
+            {num(live.inside_temp, 1)}
+            <i>°C</i>
+          </b>
+        </div>
+        <div>
+          <span>{t("kpi.tempOut")}</span>
+          <b className="num">
+            {num(live.outside_temp, 1)}
+            <i>°C</i>
+          </b>
+        </div>
+        <div>
+          <span>{t("kpi.odometer")}</span>
+          <b className="num">
+            {num(live.odometer)}
+            <i>km</i>
+          </b>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function heroTone(state: string | undefined): "green" | "blue" | "amber" | "red" | "muted" {
+  switch (state) {
+    case "charging":
+      return "green";
+    case "driving":
+    case "online":
+      return "blue";
+    case "error":
+      return "red";
+    case "updating":
+      return "amber";
+    default:
+      return "muted";
+  }
+}

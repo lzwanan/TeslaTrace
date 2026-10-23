@@ -6,9 +6,11 @@ import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import ORJSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .api import health_router, router
@@ -20,6 +22,10 @@ from .mqtt import MqttFeed
 from .store import Store
 
 log = logging.getLogger("teslatrace")
+
+# Built by `npm run build` in frontend/ and copied here by the Dockerfile. Absent when
+# running the backend alone, which is the normal case for development.
+WEB_DIR = Path(__file__).with_name("static")
 
 
 def configure_logging(level: str) -> None:
@@ -95,18 +101,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         return response
 
-    @app.get("/")
-    async def index():
-        return {
-            "name": "TeslaTrace",
-            "version": __version__,
-            "docs": "/api/docs",
-            "summary": "/api/v1/summary",
-            "health": "/healthz",
-        }
-
     app.include_router(health_router())
     app.include_router(router(), prefix="/api/v1")
+
+    if WEB_DIR.is_dir():
+        # Mounted last so /api/* and /healthz win. Hash routing means the SPA only
+        # ever needs "/" — no rewrite rule, no server-side routing.
+        app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
+        log.info("serving web UI from %s", WEB_DIR)
+    else:
+        log.warning("no web build found (%s); API only", WEB_DIR)
+
+        @app.get("/")
+        async def index():
+            return {
+                "name": "TeslaTrace",
+                "version": __version__,
+                "docs": "/api/docs",
+                "summary": "/api/v1/summary",
+                "health": "/healthz",
+                "web": "not built — run `npm run build` in frontend/",
+            }
+
     return app
 
 

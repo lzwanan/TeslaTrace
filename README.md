@@ -39,7 +39,7 @@ TeslaTrace is the other half:
 - **Numbers before charts** — a big number with a unit and one line of context. Charts live one screen down, explaining the number.
 - **State must be explainable** — when your car sleeps, TeslaMate stops polling. Every value shows how stale it is, so a frozen number never looks like a bug.
 
-## What it will do
+## Features
 
 | Area     | Highlights                                                                                                                  |
 | -------- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -79,9 +79,8 @@ The backend runs today. Four values, all of them already in your TeslaMate compo
 
 ```bash
 git clone https://github.com/lzwanan/TeslaTrace && cd TeslaTrace/deploy
-cp .env.example .env          # paste DATABASE_PASS from your TeslaMate compose
-docker build -t ghcr.io/lzwanan/teslatrace:latest ../backend   # until the first image is published
-docker compose -f docker-compose.example.yml up -d
+cp .env.example .env                                    # paste DATABASE_PASS
+docker compose -f docker-compose.example.yml up -d --build
 ```
 
 It joins TeslaMate's existing Docker network, so neither PostgreSQL nor Mosquitto needs a port published. Then:
@@ -128,14 +127,32 @@ GET /api/v1/stream            SSE: one snapshot, then a frame per change
 
 ## Roadmap
 
-| Phase | Scope                                                         | Status         |
-| ----- | ------------------------------------------------------------- | -------------- |
-| P0    | Design system, card registry, layout breakpoints              | ✅ prototype    |
-| P1    | FastAPI skeleton: read-only DB, MQTT → SSE, `/api/v1/summary` | 🚧 in progress |
-| P2    | React app: overview + drives + charging                       | ⬜              |
-| P3    | Insights: materialized views, battery health, vampire drain   | ⬜              |
-| P4    | Auth, PWA, Docker image, Synology docs                        | ⬜              |
-| P5    | Trip replay, multi-car                                        | ⬜              |
+| Phase | Scope                                                                        | Status      |
+|-------|------------------------------------------------------------------------------|-------------|
+| P0    | Design system, card registry, layout breakpoints                             | ✅ done      |
+| P1    | FastAPI: read-only DB, MQTT → SSE, `/api/v1/summary`, `/drives`, healthcheck | ✅ done      |
+| P2    | React app: overview, drives, card registry, zh/en, dark and light            | ✅ done      |
+| P3    | Insights: materialized views, battery health, vampire drain                  | 🚧 next      |
+| P4    | Auth hardening, PWA, published image, Synology docs                          | ⬜           |
+| P5    | Trip replay, multi-car                                                       | ⬜           |
+
+
+## Development
+
+Two processes, no configuration between them — Vite proxies `/api` to the backend:
+
+```bash
+# terminal 1
+cd backend && pip install -e ".[dev]"
+DATABASE_PASS=... python -m app          # http://localhost:8000
+
+# terminal 2
+cd frontend && npm install && npm run dev  # http://localhost:5173
+```
+
+`npm run build` type-checks and emits `frontend/dist`; the Docker image copies that into the Python package and FastAPI serves it from `/`.
+
+The interface is Chinese by default and switches to English with one click in the header (the choice is remembered). Strings live in `frontend/src/lib/i18n.tsx` — adding a language there is a matter of one more dictionary.
 
 ## Design decisions
 
