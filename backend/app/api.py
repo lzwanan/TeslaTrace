@@ -161,7 +161,13 @@ def router() -> APIRouter:
         months: int = Query(default=6, ge=3, le=24),
     ):
         car = await _pick_car(request, car_id)
-        return await _store(request).stats(car["id"], _tz(_settings(request)), months)
+        tz = _tz(_settings(request))
+        store = _store(request)
+        # One response for the whole insights page: two batches, both cached by
+        # nothing and cheap enough to run on each load.
+        data = await store.stats(car["id"], tz, months)
+        data.update(await store.extras(car["id"], tz))
+        return data
 
     @api.get("/stream")
     async def stream(request: Request, car_id: int | None = None):

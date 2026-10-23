@@ -9,7 +9,7 @@ import { useI18n } from "./lib/i18n";
 import { useNow, useSummaryStream } from "./lib/live";
 import type { Car } from "./lib/types";
 import { Drives } from "./pages/Drives";
-import { Insights } from "./pages/Insights";
+import { Insights } from "./pages/insights";
 import { Overview } from "./pages/Overview";
 
 type Route = "overview" | "drives" | "insights";

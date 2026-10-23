@@ -85,6 +85,43 @@ export type StatsMonth = {
   costed: number;
 };
 
+export type Yearly = {
+  year: number;
+  drives: number;
+  km: number;
+  avg_km: number;
+  longest_km: number;
+  sessions: number;
+  kwh: number;
+  cost: number | null;
+  costed: number;
+};
+
+export type Distribution = { key: string; value: number };
+
+export type ChargingProfile = {
+  sessions: number;
+  avg_kw: number | null;
+  avg_minutes: number | null;
+  max_kwh: number | null;
+  levels: Distribution[];
+  hours: Distribution[];
+};
+
+export type Habits = {
+  drives: number;
+  avg_kmh: number | null;
+  avg_minutes: number | null;
+  avg_km: number | null;
+  longest_km: number | null;
+  days_used: number;
+  night_drives: number;
+  short_drives: number;
+  busiest_day_km: number | null;
+};
+
+export type Place = { name: string; visits: number };
+
 export type Stats = {
   months: StatsMonth[];
   battery: { capacity_kwh: number | null; samples: number; rated_range_km: number | null };
@@ -96,4 +133,8 @@ export type Stats = {
     drives: number;
     sessions: number;
   };
+  yearly: Yearly[];
+  charging: ChargingProfile;
+  habits: Habits;
+  places: Place[];
 };
