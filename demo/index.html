@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0E13">
+<title>Tesla 车主监控台 · 样式 Demo</title>
+<style>
+:root{
+  --r-card:16px; --r-lg:20px; --r-pill:999px;
+  --fs-num:44px; --fs-big:30px; --fs-t:15px; --fs-s:13px; --fs-xs:11.5px;
+  --gap:12px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+}
+html[data-theme="dark"]{
+  --bg:#0A0E13; --bg2:#0D1218; --card:#141A22; --card2:#1A222C;
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.13);
+  --t1:#F5F7FA; --t2:#9AA4B2; --t3:#6C7684;
+  --red:#FF3B4E; --red-d:#E31937; --green:#22C55E; --blue:#4C8DFF; --amber:#F59E0B; --teal:#14B8A6;
+  --track:rgba(255,255,255,.08); --glow:none;
+}
+html[data-theme="light"]{
+  --bg:#EFF2F5; --bg2:#FFFFFF; --card:#FFFFFF; --card2:#F6F8FA;
+  --line:rgba(9,15,25,.07); --line2:rgba(9,15,25,.13);
+  --t1:#0B0F14; --t2:#5A6472; --t3:#8B95A3;
+  --red:#D3122E; --red-d:#B00E25; --green:#16A34A; --blue:#2563EB; --amber:#D97706; --teal:#0D9488;
+  --track:rgba(9,15,25,.07); --glow:none;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--t1);font-family:var(--font);
+  font-size:var(--fs-t);line-height:1.5;letter-spacing:.01em;
+  -webkit-font-smoothing:antialiased;
+}
+b,strong{font-weight:600}
+em{font-style:normal}
+svg{display:block}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ---------- review bar（评审工具，不属于产品 UI） ---------- */
+.clean .review{display:none}
+.clean .stage{padding-top:0}
+.clean .app{border-left:0;border-right:0}
+.review{
+  position:fixed;top:0;left:0;right:0;height:48px;z-index:100;
+  display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:var(--bg2);border-bottom:1px solid var(--line);
+  font-size:12px;color:var(--t2);
+}
+.review .tag{
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);
+  padding-right:10px;border-right:1px solid var(--line);margin-right:2px;white-space:nowrap;
+}
+.review{white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+.review::-webkit-scrollbar{display:none}
+@media (max-width:760px){
+  .review .hint{display:none}
+  .review .tag{display:none}
+  .review{padding:0 10px;gap:8px}
+  .seg button{padding:5px 9px;font-size:11.5px}
+  .rbtn{padding:6px 10px;font-size:11.5px}
+}
+.seg{display:flex;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:2px}
+.seg button{
+  border:0;background:transparent;color:var(--t2);font:inherit;font-size:12px;
+  padding:5px 11px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap;
+}
+.seg button.on{background:var(--t1);color:var(--bg);font-weight:500}
+.rbtn{
+  border:1px solid var(--line2);background:transparent;color:var(--t2);font:inherit;font-size:12px;
+  padding:6px 12px;border-radius:9px;cursor:pointer;
+}
+.rbtn:hover{color:var(--t1);border-color:var(--t2)}
+.review .hint{margin-left:auto;color:var(--t3);font-size:11.5px}
+
+/* ---------- stage ---------- */
+.stage{
+  height:100%;padding-top:48px;display:flex;justify-content:center;
+  background:
+    radial-gradient(900px 500px at 50% -10%, color-mix(in srgb, var(--red) 7%, transparent), transparent 70%);
+}
+.frame{
+  width:min(var(--vp,390px),100%);height:100%;display:flex;
+  container-type:inline-size;container-name:app;
+}
+.app{
+  flex:1;min-width:0;height:100%;background:var(--bg);
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
+}
+@container app (min-width:640px){ .app{border-left:1px solid var(--line);border-right:1px solid var(--line)} }
+
+/* ---------- sidebar（≥1024） ---------- */
+.side{display:none}
+@container app (min-width:1024px){
+  .app{flex-direction:row}
+  .side{
+    display:flex;flex-direction:column;gap:6px;width:216px;flex:none;
+    padding:18px 12px;border-right:1px solid var(--line);background:var(--bg2);
+  }
+  .brand{display:flex;align-items:center;gap:9px;padding:4px 10px 18px}
+  .brand .logo{
+    width:26px;height:26px;border-radius:8px;background:var(--red-d);
+    display:grid;place-items:center;color:#fff;flex:none;
+  }
+  .brand b{font-size:14px;letter-spacing:.01em}
+  .brand span{display:block;font-size:11px;color:var(--t3);font-weight:400;letter-spacing:.02em}
+  .side .item{
+    display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;
+    color:var(--t2);font-size:13.5px;cursor:pointer;border:0;background:transparent;
+    font-family:inherit;text-align:left;width:100%;transition:.14s;
+  }
+  .side .item:hover{background:var(--card);color:var(--t1)}
+  .side .item.on{background:var(--card);color:var(--t1);font-weight:500;box-shadow:inset 0 0 0 1px var(--line)}
+  .side .item.on .ico{color:var(--red)}
+  .side .item .badge{
+    margin-left:auto;font-size:10.5px;color:var(--amber);font-variant-numeric:tabular-nums;
+  }
+  .side .foot{margin-top:auto;padding:12px 12px 4px;border-top:1px solid var(--line);font-size:11px;color:var(--t3);line-height:1.7}
+}
+.ico{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- main ---------- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px 10px;
+}
+@container app (min-width:640px){ .topbar{padding:18px 22px 12px} }
+.tb-title{min-width:0}
+.tb-title h1{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.tb-title p{margin:3px 0 0;font-size:11.5px;color:var(--t3)}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.state{
+  display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 9px;
+  border-radius:var(--r-pill);font-size:12px;font-weight:500;
+  border:1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  background:color-mix(in srgb, var(--green) 12%, transparent);
+  color:var(--green);white-space:nowrap;
+}
+.state i{
+  width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent);
+}
+.iconbtn{
+  width:32px;height:32px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);color:var(--t2);display:grid;place-items:center;cursor:pointer;
+}
+@container app (max-width:639px){ .iconbtn.hide-m{display:none} }
+
+.views{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 16px 18px;scroll-behavior:smooth}
+@container app (min-width:640px){ .views{padding:0 22px 22px} }
+@container app (min-width:1024px){ .views{padding:0 26px 26px} }
+.view{display:none}
+.view.on{display:block}
+.view.anim{animation:fade .22s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){ .view.on{animation:none} }
+
+/* ---------- grid ---------- */
+.grid{display:grid;gap:var(--gap);grid-template-columns:repeat(2,minmax(0,1fr))}
+@container app (min-width:640px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px} }
+@container app (min-width:1024px){ .grid{grid-template-columns:repeat(12,minmax(0,1fr));gap:14px} }
+
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:16px;position:relative;overflow:hidden;min-width:0;
+}
+@container app (min-width:640px){ .card{padding:18px;border-radius:18px} }
+.c-full{grid-column:span 2}
+.c-half{grid-column:span 2}
+.c-kpi{grid-column:span 1}
+@container app (min-width:640px){
+  .c-half{grid-column:span 1}
+  .tirescard{grid-column:span 2}
+}
+@container app (min-width:1024px){
+  .c-full{grid-column:span var(--sp,12)}
+  .c-half{grid-column:span var(--sp,6)}
+  .c-kpi{grid-column:span var(--sp,3)}
+  .tirescard{grid-column:span 4}
+}
+.cap{display:flex;align-items:center;gap:7px;color:var(--t2);font-size:12px;margin-bottom:10px}
+.cap .ico{width:15px;height:15px;color:var(--t3)}
+.cap .more{margin-left:auto;color:var(--t3);font-size:11px}
+
+/* ---------- hero ---------- */
+.hero{padding:0;background:
+  linear-gradient(180deg,color-mix(in srgb, var(--green) 7%,var(--card)) 0%,var(--card) 62%);}
+.hero-in{padding:18px 16px 0;display:flex;align-items:center;gap:16px}
+@container app (min-width:640px){ .hero-in{padding:20px 20px 0;gap:22px} }
+.ring{position:relative;width:124px;height:124px;flex:none}
+@container app (min-width:640px){ .ring{width:140px;height:140px} }
+.ring svg{width:100%;height:100%}
+.ring .bgc{stroke:var(--track);stroke-width:9;fill:none}
+.ring .fgc{stroke:var(--green);stroke-width:9;fill:none;stroke-linecap:round;transition:stroke-dasharray .6s ease}
+.ring-in{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;line-height:1;
+}
+.ring-in b{font-size:32px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.ring-in b s{text-decoration:none;font-size:15px;font-weight:500;color:var(--t2);margin-left:1px}
+.ring-in em{font-size:10.5px;color:var(--t3);margin-top:5px;letter-spacing:0}
+.hero-meta{min-width:0;flex:1}
+.range{display:flex;align-items:baseline;gap:3px;margin:2px 0 2px}
+.range b{font-size:var(--fs-num);font-weight:600;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+.range s{text-decoration:none;font-size:14px;color:var(--t2);font-weight:500}
+.range em{font-size:10.5px;color:var(--t3);margin-left:5px;padding:2px 5px;border:1px solid var(--line);border-radius:5px}
+.hero-sub{font-size:12px;color:var(--t2);margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-foot{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin-top:16px;padding:13px 16px;border-top:1px solid var(--line);
+  background:color-mix(in srgb, var(--t1) 2.5%, transparent);
+}
+@container app (min-width:640px){ .hero-foot{padding:14px 20px} }
+.hero-foot div{min-width:0}
+.hero-foot em{display:block;font-size:11px;color:var(--t3);margin-bottom:3px;white-space:nowrap}
+.hero-foot b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hero-foot b s{text-decoration:none;font-size:11px;color:var(--t2);font-weight:400;margin-left:1px}
+
+/* ---------- kpi ---------- */
+.kpi{padding:14px}
+@container app (min-width:640px){ .kpi{padding:16px 17px} }
+.kpi .cap{margin-bottom:8px;font-size:11.5px;gap:6px}
+.kpi-v{font-size:26px;font-weight:600;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:3px}
+@container app (min-width:1024px){ .kpi-v{font-size:29px} }
+.kpi-v s{text-decoration:none;font-size:11.5px;color:var(--t2);font-weight:400;letter-spacing:0}
+.kpi-f{margin-top:7px;font-size:11px;color:var(--t3);display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden}
+.kpi-f.up{color:var(--green)} .kpi-f.dn{color:var(--amber)}
+.spark{width:100%;height:26px;margin-top:8px}
+
+/* ---------- map ---------- */
+.map{padding:0;min-height:186px;display:flex;background:var(--bg2)}
+@container app (min-width:640px){ .map{min-height:214px} }
+@container app (min-width:1024px){ .map{min-height:236px} }
+.map .canvas{position:absolute;inset:0;overflow:hidden}
+.map .canvas svg{width:100%;height:100%}
+.map .overlay{position:relative;z-index:2;padding:14px;display:flex;flex-direction:column;width:100%;justify-content:space-between}
+.map .hint{font-size:10.5px;color:var(--t3);background:color-mix(in srgb, var(--bg) 72%, transparent);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:6px;padding:3px 7px;align-self:flex-start}
+.map .place{
+  align-self:flex-start;display:flex;align-items:center;gap:7px;
+  background:color-mix(in srgb, var(--card) 86%, transparent);backdrop-filter:blur(8px);
+  border:1px solid var(--line2);border-radius:var(--r-pill);padding:6px 12px 6px 9px;font-size:12px;
+}
+.map .place .ico{width:14px;height:14px;color:var(--red)}
+.map .place em{color:var(--t3);font-size:11px;margin-left:2px}
+
+/* ---------- drive list ---------- */
+.list{list-style:none;margin:0;padding:0}
+.drive{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.drive:last-child{border-bottom:0;padding-bottom:2px}
+.drive:first-child{padding-top:2px}
+.dline{display:flex;flex-direction:column;align-items:center;gap:3px;padding:2px 0;flex:none}
+.dline .d{width:7px;height:7px;border-radius:50%;border:2px solid var(--t3)}
+.dline .d.a{border-color:var(--red);background:var(--red)}
+.dline .d.b{border-color:var(--t2)}
+.dline .l{width:1px;flex:1;min-height:14px;background:linear-gradient(var(--line2),var(--line))}
+.dm{min-width:0;flex:1}
+.dm .r1{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500}
+.dm .r1 .to{color:var(--t3);font-weight:400}
+.dm .r2{font-size:11px;color:var(--t3);margin-top:3px;display:flex;gap:8px}
+.dr{text-align:right;flex:none}
+.dr b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.dr b s{text-decoration:none;font-size:10.5px;color:var(--t2);font-weight:400;margin-left:1px}
+.dr em{display:block;font-size:10.5px;color:var(--t3);margin-top:2px}
+
+/* ---------- tires ---------- */
+.tires{display:grid;grid-template-columns:1fr auto 1fr;gap:6px 10px;align-items:center;margin-top:2px}
+.tire{text-align:center;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:7px 4px}
+.tire b{display:block;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.tire b s{text-decoration:none;font-size:9.5px;color:var(--t2);font-weight:400;margin-left:1px}
+.tire em{font-size:9.5px;color:var(--t3)}
+.tire.warn{border-color:color-mix(in srgb,var(--amber) 40%,transparent)}
+.tire.warn b{color:var(--amber)}
+.carshape{width:34px;color:var(--line2)}
+.carshape svg{width:100%;height:auto}
+
+/* ---------- chart blocks ---------- */
+.chartbox{position:relative;margin-top:6px}
+.vfill{display:flex;flex-direction:column}
+.vfill .fillchart{flex:1;min-height:34px;display:flex;margin-top:8px}
+.vfill .fillchart svg{width:100%;height:100%}
+.chartbox svg{width:100%;height:auto;overflow:visible}
+.xaxis{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:6px;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--t2);margin-top:9px}
+.legend i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px;vertical-align:1px}
+
+/* ---------- insights specific ---------- */
+.bigstat{display:flex;align-items:baseline;gap:5px}
+.bigstat b{font-size:34px;font-weight:600;letter-spacing:-.035em;font-variant-numeric:tabular-nums;line-height:1}
+.bigstat s{text-decoration:none;font-size:12px;color:var(--t2)}
+.bigstat em{font-size:11px;color:var(--t3);margin-left:4px}
+.note{font-size:11px;color:var(--t3);margin-top:9px;line-height:1.6}
+.tagline{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:2px 7px;border-radius:5px;background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green);font-weight:500}
+.places{list-style:none;margin:0;padding:0}
+.places li{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
+.places li:last-child{border-bottom:0}
+.places .bar{flex:1;height:5px;border-radius:3px;background:var(--track);overflow:hidden}
+.places .bar i{display:block;height:100%;border-radius:3px;background:var(--red);opacity:.85}
+.places em{font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums;flex:none;width:34px;text-align:right}
+
+/* ---------- tabbar（<1024） ---------- */
+.tabbar{display:flex;flex:none;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+@container app (min-width:1024px){ .tabbar{display:none} }
+.tabbar button{
+  flex:1;border:0;background:transparent;color:var(--t3);font:inherit;font-size:10.5px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;cursor:pointer;border-radius:9px;
+}
+.tabbar button .ico{width:21px;height:21px;stroke-width:1.6}
+.tabbar button.on{color:var(--t1)}
+.tabbar button.on .ico{color:var(--red)}
+.tabbar button span{letter-spacing:.02em}
+
+/* ---------- misc ---------- */
+.section-t{display:flex;align-items:center;gap:8px;margin:16px 2px 9px;font-size:12px;color:var(--t2)}
+.section-t .line{flex:1;height:1px;background:var(--line)}
+.mini{font-size:10.5px;color:var(--t3)}
+.seg-ctl{display:inline-flex;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px;margin-left:auto}
+.seg-ctl button{border:0;background:transparent;color:var(--t3);font:inherit;font-size:10.5px;padding:3px 8px;border-radius:6px;cursor:pointer}
+.seg-ctl button.on{background:var(--t1);color:var(--bg)}
+.empty{
+  display:flex;flex-direction:column;align-items:center;gap:8px;padding:34px 16px;text-align:center;
+  border:1px dashed var(--line2);border-radius:var(--r-card);color:var(--t3);font-size:12px;
+}
+.empty .ico{width:26px;height:26px;opacity:.5}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17h14M6 17l-1.2-4.2a2 2 0 0 1 .5-2l1.6-1.6A2 2 0 0 1 8.3 8.7h7.4a2 2 0 0 1 1.4.5l1.6 1.6a2 2 0 0 1 .5 2L18 17"/><path d="M3 17h18"/><circle cx="7.5" cy="18.5" r="1.3"/><circle cx="16.5" cy="18.5" r="1.3"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="5" r="2.2"/><path d="M8.2 19h6.3a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7h6.3"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11l-1 8.5 9-11.5h-6.5L13 2Z"/></symbol>
+<symbol id="i-battery" viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2.5"/><path d="M21.5 10.5v3"/><path d="M5.5 10.5v3M9 10.5v3M12.5 10.5v3"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a8.5 8.5 0 1 1 16 0"/><path d="M12 18l4-5.5"/><circle cx="12" cy="18" r="1.4"/></symbol>
+<symbol id="i-tire" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v3.3M12 17.2v3.3M3.5 12h3.3M17.2 12h3.3"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21.5s7-6.2 7-11.2a7 7 0 1 0-14 0c0 5 7 11.2 7 11.2Z"/><circle cx="12" cy="10" r="2.6"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5M12.5 16V7M17 16v-8"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v4.8l3 1.8"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
+<symbol id="i-temp" viewBox="0 0 24 24"><path d="M14.5 13.6V5a2.5 2.5 0 0 0-5 0v8.6a4.5 4.5 0 1 0 5 0Z"/><path d="M12 9v6"/></symbol>
+<symbol id="i-set" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.4-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.6 1Z"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 16l5.5-5.5 3.5 3.5L21 5"/><path d="M15.5 5H21v5.5"/></symbol>
+<symbol id="i-coins" viewBox="0 0 24 24"><ellipse cx="12" cy="6.5" rx="7" ry="3"/><path d="M5 6.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/><path d="M5 11.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.8 5 5.6v5.8c0 4.4 3 8.2 7 9.8 4-1.6 7-5.4 7-9.8V5.6l-7-2.8Z"/><path d="M9 11.8l2.1 2.1 4-4.2"/></symbol>
+</defs></svg>
+
+<div class="review">
+  <span class="tag">Style review</span>
+  <div class="seg" id="segDevice">
+    <button data-vp="390" class="on">手机 390</button>
+    <button data-vp="820">平板 820</button>
+    <button data-vp="1440">桌面 1440</button>
+  </div>
+  <button class="rbtn" id="btnTheme">明 / 暗</button>
+  <span class="hint" id="hint">数据为示意 · 切换设备可看三档断点</span>
+</div>
+
+<div class="stage">
+  <div class="frame" id="frame">
+  <div class="app" id="app">
+
+    <aside class="side">
+      <div class="brand">
+        <span class="logo"><svg class="ico" style="width:16px;height:16px"><use href="#i-bolt"/></svg></span>
+        <div><b>车主台</b><span>Model Y · 京A·D8F26</span></div>
+      </div>
+      <button class="item on" data-go="overview"><svg class="ico"><use href="#i-gauge"/></svg>概览</button>
+      <button class="item" data-go="drives"><svg class="ico"><use href="#i-route"/></svg>行程<span class="badge">1,206</span></button>
+      <button class="item" data-go="charging"><svg class="ico"><use href="#i-bolt"/></svg>充电<span class="badge">318</span></button>
+      <button class="item" data-go="insights"><svg class="ico"><use href="#i-chart"/></svg>统计</button>
+      <button class="item" data-go="none"><svg class="ico"><use href="#i-set"/></svg>设置</button>
+      <div class="foot">
+        数据源 TeslaMate<br>
+        最后同步 <span class="num" id="syncSide">8</span> 秒前
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="tb-title">
+          <h1 id="pageTitle">概览</h1>
+          <p id="pageSub">10月24日 周六 · 已同步 <span class="num" id="syncTop">8</span> 秒前</p>
+        </div>
+        <div class="tb-right">
+          <span class="state" id="statePill"><i></i>充电中</span>
+          <button class="iconbtn hide-m" id="btnRefresh" aria-label="刷新"><svg class="ico"><use href="#i-set"/></svg></button>
+        </div>
+      </header>
+
+      <div class="views">
+
+        <!-- ========== 概览 ========== -->
+        <section class="view on" data-view="overview">
+          <div class="grid">
+
+            <article class="card hero c-full" style="--sp:5">
+              <div class="hero-in">
+                <div class="ring">
+                  <svg viewBox="0 0 140 140">
+                    <circle class="bgc" cx="70" cy="70" r="60"/>
+                    <circle class="fgc" id="socRing" cx="70" cy="70" r="60"
+                      stroke-dasharray="256 377" transform="rotate(-90 70 70)"/>
+                  </svg>
+                  <div class="ring-in">
+                    <b id="socVal">68<s>%</s></b>
+                    <em>目标 90%</em>
+                  </div>
+                </div>
+                <div class="hero-meta">
+                  <div class="range"><b id="rangeVal">342</b><s>km</s><em>表显</em></div>
+                  <div class="hero-sub">Model Y 长续航 · 京A·D8F26</div>
+                  <div class="hero-sub" style="color:var(--t3);margin-top:4px">停在 家 · 地库 B2 · 已停 2h 14m</div>
+                </div>
+              </div>
+              <div class="hero-foot">
+                <div><em>本次已充</em><b id="chgKwh">18.4<s>kWh</s></b></div>
+                <div><em>本次费用</em><b id="chgCost">5.89<s>元</s></b></div>
+                <div><em>当前电价</em><b>0.32<s>谷电</s></b></div>
+              </div>
+            </article>
+
+            <article class="card map c-full" style="--sp:7">
+              <div class="canvas">
+                <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice">
+                  <rect width="400" height="260" fill="var(--bg2)"/>
+                  <g fill="none" stroke="var(--line)" stroke-width="1">
+                    <path d="M0 60h400M0 130h400M0 200h400M70 0v260M160 0v260M250 0v260M330 0v260"/>
+                  </g>
+                  <g fill="none" stroke="var(--line2)" stroke-width="3" opacity=".5">
+                    <path d="M-10 130h180c10 0 12-8 12-18V8"/>
+                    <path d="M250 260v-60c0-12 8-18 20-18h140"/>
+                  </g>
+                  <path d="M96 196c40-8 62-34 70-58 8-26 34-44 70-44 26 0 44 12 62 12"
+                    fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round"
+                    opacity=".9" stroke-dasharray="0"/>
+                  <circle cx="96" cy="196" r="4.5" fill="var(--red)"/>
+                  <circle cx="96" cy="196" r="10" fill="none" stroke="var(--red)" stroke-width="1" opacity=".35"/>
+                  <circle cx="298" cy="106" r="5" fill="var(--bg2)" stroke="var(--t2)" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="overlay">
+                <span class="hint">地图占位 · 正式版接入高德 JS API（GCJ-02）</span>
+                <span class="place"><svg class="ico"><use href="#i-pin"/></svg>家 · 地库 B2<em>· 11.2 kW</em></span>
+              </div>
+            </article>
+
+            <article class="card kpi c-kpi" style="--sp:3">
+              <div class="cap"><svg class="ico"><use href="#i-route"/></svg>今日里程</div>
+              <div class="kpi-v">42.6<s>km</s></div>
+              <div class="kpi-f up"><svg class="ico" style="width:11px;height:11px"><use href="#i-trend"/></svg>较昨日 +8.4 km</div>
+            </article>
+
+            <article class="card kpi c-kpi" style="--sp:3">
+              <div class="cap"><svg class="ico"><use href="#i-gauge"/></svg>今日能耗</div>
+              <div class="kpi-v">138<s>Wh/km</s></div>
+              <div class="kpi-f up">优于年均 7%</div>
+            </article>
+
+            <article class="card kpi c-kpi" style="--sp:3">
+              <div class="cap"><svg class="ico"><use href="#i-coins"/></svg>本月电费</div>
+              <div class="kpi-v">126.4<s>元</s></div>
+              <div class="kpi-f">家充 92% · 超充 8%</div>
+            </article>
+
+            <article class="card kpi c-kpi" style="--sp:3">
+              <div class="cap"><svg class="ico"><use href="#i-battery"/></svg>电池健康</div>
+              <div class="kpi-v">96.2<s>%</s></div>
+              <div class="kpi-f up">24 个月衰减 3.8%</div>
+            </article>
+
+            <article class="card c-half vfill" style="--sp:4">
+              <div class="cap"><svg class="ico"><use href="#i-bolt"/></svg>正在充电
+                <span class="more">11.2 kW</span>
+              </div>
+              <div class="bigstat"><b>1<s>h</s> 12<s>m</s></b><em>充至 90%</em></div>
+              <div class="chartbox fillchart"><svg id="chgCurve" viewBox="0 0 300 90" preserveAspectRatio="none"></svg></div>
+              <div class="note">36% → 68% · 已充 18.4 kWh · 均价 0.32 元/kWh</div>
+            </article>
+
+            <article class="card c-half" style="--sp:8">
+              <div class="cap"><svg class="ico"><use href="#i-chart"/></svg>近 14 天能耗
+                <span class="more">Wh/km</span>
+              </div>
+              <div class="chartbox"><svg id="energy14" viewBox="0 0 300 110"></svg></div>
+              <div class="xaxis"><span>10/11</span><span>10/15</span><span>10/19</span><span>10/24</span></div>
+            </article>
+
+            <article class="card c-full" style="--sp:8">
+              <div class="cap"><svg class="ico"><use href="#i-route"/></svg>最近行程
+                <span class="more" data-go="drives" style="cursor:pointer">全部 ›</span>
+              </div>
+              <ul class="list">
+                <li class="drive">
+                  <div class="dline"><span class="d a"></span><span class="l"></span><span class="d b"></span></div>
+                  <div class="dm">
+                    <div class="r1">公司<span class="to">→</span>家</div>
+                    <div class="r2"><span>今天 18:42</span><span>32 分钟</span><span>14.6 kWh</span></div>
+                  </div>
+                  <div class="dr"><b>21.8<s>km</s></b><em>142 Wh/km</em></div>
+                </li>
+                <li class="drive">
+                  <div class="dline"><span class="d a"></span><span class="l"></span><span class="d b"></span></div>
+                  <div class="dm">
+                    <div class="r1">家<span class="to">→</span>公司</div>
+                    <div class="r2"><span>今天 08:06</span><span>35 分钟</span><span>13.9 kWh</span></div>
+                  </div>
+                  <div class="dr"><b>20.8<s>km</s></b><em>134 Wh/km</em></div>
+                </li>
+                <li class="drive">
+                  <div class="dline"><span class="d a"></span><span class="l"></span><span class="d b"></span></div>
+                  <div class="dm">
+                    <div class="r1">望京<span class="to">→</span>家</div>
+                    <div class="r2"><span>周四 21:12</span><span>26 分钟</span><span>9.8 kWh</span></div>
+                  </div>
+                  <div class="dr"><b>16.4<s>km</s></b><em>151 Wh/km</em></div>
+                </li>
+              </ul>
+            </article>
+
+            <article class="card c-half tirescard" style="--sp:4">
+              <div class="cap"><svg class="ico"><use href="#i-tire"/></svg>胎压<span class="more">bar</span></div>
+              <div class="tires">
+                <div>
+                  <div class="tire"><b>2.9<s>bar</s></b><em>左前</em></div>
+                  <div class="tire" style="margin-top:6px"><b>2.8<s>bar</s></b><em>左后</em></div>
+                </div>
+                <div class="carshape">
+                  <svg viewBox="0 0 34 78" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <rect x="6" y="4" width="22" height="70" rx="10"/>
+                    <path d="M11 20h12M11 52h12"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="tire"><b>2.9<s>bar</s></b><em>右前</em></div>
+                  <div class="tire warn" style="margin-top:6px"><b>2.6<s>bar</s></b><em>右后</em></div>
+                </div>
+              </div>
+              <div class="note">右后低于建议值 0.2 bar，留意慢漏气</div>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- ========== 行程 ========== -->
+        <section class="view" data-view="drives">
+          <div class="grid">
+            <article class="card c-full" style="--sp:12">
+              <div class="cap"><svg class="ico"><use href="#i-route"/></svg>本月行程
+                <span class="seg-ctl"><button class="on">本周</button><button>本月</button><button>自定义</button></span>
+              </div>
+              <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px">
+                <div><div class="mini">趟次</div><div class="kpi-v" style="font-size:22px">38</div></div>
+                <div><div class="mini">总里程</div><div class="kpi-v" style="font-size:22px">412<s>km</s></div></div>
+                <div><div class="mini">总耗时</div><div class="kpi-v" style="font-size:22px">9.4<s>h</s></div></div>
+              </div>
+            </article>
+
+            <article class="card c-full" style="--sp:12">
+              <ul class="list">
+                <li class="drive">
+                  <div class="dline"><span class="d a"></span><span class="l"></span><span class="d b"></span></div>
+                  <div class="dm">
+                    <div class="r1">公司<span class="to">→</span>家</div>
+                    <div class="r2"><span>今天 18:42</span><span>32 分钟</span><span>14.6 kWh</span><span>¥4.67</span></div>
+                  </div>
+                  <div class="dr"><b>21.8<s>km</s></b><em>142 Wh/km</em></div>
+                </li>
+                <li class="drive">
+                  <div class="dline"><span class="d a"></span><span class="l"></span><span class="d b"></span></div>
+                  <div class="dm">
+                    <div class="r1">家<span class="to">→</span>公司</div>
+                    <div class="r2"><span>今天 08:06</span><span>35 分钟</span><span>13.9 kWh</span><span>¥4.45</span></div>
+                  </div>
+                  <div class="dr"><b>20.8<s>km</s></b><em>134 Wh/km</em></div>
+                </li>
+                <li class="drive">
+                  <div class="dline"><span class="d a"></span><span class="l"></span><span class="d b"></span></div>
+                  <div class="dm">
+                    <div class="r1">望京<span class="to">→</span>家</div>
+                    <div class="r2"><span>周四 21:12</span><span>26 分钟</span><span>9.8 kWh</span><span>¥3.14</span></div>
+                  </div>
+                  <div class="dr"><b>16.4<s>km</s></b><em>151 Wh/km</em></div>
+                </li>
+                <li class="drive">
+                  <div class="dline"><span class="d a"></span><span class="l"></span><span class="d b"></span></div>
+                  <div class="dm">
+                    <div class="r1">家<span class="to">→</span>首都机场 T3</div>
+                    <div class="r2"><span>周三 06:20</span><span>58 分钟</span><span>22.1 kWh</span><span>¥7.07</span></div>
+                  </div>
+                  <div class="dr"><b>27.3<s>km</s></b><em>162 Wh/km</em></div>
+                </li>
+              </ul>
+            </article>
+
+            <article class="card c-full" style="--sp:12">
+              <div class="cap"><svg class="ico"><use href="#i-pin"/></svg>行程地图<span class="more">4 条 · 点击查看轨迹</span></div>
+              <div style="height:170px;border-radius:12px;overflow:hidden;position:relative;border:1px solid var(--line)">
+                <svg viewBox="0 0 400 170" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">
+                  <rect width="400" height="170" fill="var(--bg2)"/>
+                  <g fill="none" stroke="var(--line)"><path d="M0 45h400M0 105h400M0 150h400M80 0v170M200 0v170M300 0v170"/></g>
+                  <path d="M60 120c50-10 70-40 100-45s60 20 90 10 50-35 90-40" fill="none" stroke="var(--red)" stroke-width="2" opacity=".85"/>
+                  <path d="M60 60c40 20 80 10 110 30s60 30 100 25 40-10 70-25" fill="none" stroke="var(--blue)" stroke-width="2" opacity=".5" stroke-dasharray="4 4"/>
+                </svg>
+              </div>
+              <div class="legend"><span><i style="background:var(--red)"></i>今天</span><span><i style="background:var(--blue);opacity:.6"></i>本周其他</span></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- ========== 充电 ========== -->
+        <section class="view" data-view="charging">
+          <div class="grid">
+            <article class="card c-full" style="--sp:12">
+              <div class="cap"><svg class="ico"><use href="#i-bolt"/></svg>本月充电
+                <span class="seg-ctl"><button class="on">本月</button><button>本年</button></span>
+              </div>
+              <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px">
+                <div><div class="mini">次数</div><div class="kpi-v" style="font-size:22px">14</div></div>
+                <div><div class="mini">总量</div><div class="kpi-v" style="font-size:22px">386<s>kWh</s></div></div>
+                <div><div class="mini">费用</div><div class="kpi-v" style="font-size:22px">126.4<s>元</s></div></div>
+              </div>
+            </article>
+
+            <article class="card c-half" style="--sp:6">
+              <div class="cap"><svg class="ico"><use href="#i-clock"/></svg>充电时段分布<span class="more">谷电占比 78%</span></div>
+              <div class="chartbox"><svg id="chargeSlots" viewBox="0 0 300 90"></svg></div>
+              <div class="xaxis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+            </article>
+
+            <article class="card c-half" style="--sp:6">
+              <div class="cap"><svg class="ico"><use href="#i-coins"/></svg>电费构成<span class="more">家充 / 超充</span></div>
+              <div class="chartbox"><svg id="costMix" viewBox="0 0 300 90"></svg></div>
+              <div class="legend"><span><i style="background:var(--green)"></i>家充 ¥116.4</span><span><i style="background:var(--amber)"></i>超充 ¥10.0</span></div>
+            </article>
+
+            <article class="card c-full" style="--sp:12">
+              <div class="cap"><svg class="ico"><use href="#i-bolt"/></svg>充电记录</div>
+              <ul class="list">
+                <li class="drive">
+                  <div class="dline"><span class="d" style="border-color:var(--green);background:var(--green)"></span><span class="l"></span></div>
+                  <div class="dm">
+                    <div class="r1">家 · 交流 11 kW</div>
+                    <div class="r2"><span>今天 22:30 起</span><span>进行中</span></div>
+                  </div>
+                  <div class="dr"><b>18.4<s>kWh</s></b><em>¥5.89</em></div>
+                </li>
+                <li class="drive">
+                  <div class="dline"><span class="d" style="border-color:var(--t3);background:var(--t3)"></span><span class="l"></span></div>
+                  <div class="dm">
+                    <div class="r1">家 · 交流 11 kW</div>
+                    <div class="r2"><span>周四 23:10</span><span>5h 20m</span><span>谷电</span></div>
+                  </div>
+                  <div class="dr"><b>42.6<s>kWh</s></b><em>¥13.63</em></div>
+                </li>
+                <li class="drive">
+                  <div class="dline"><span class="d" style="border-color:var(--t3);background:var(--t3)"></span></div>
+                  <div class="dm">
+                    <div class="r1">首都机场 · 超充 120 kW</div>
+                    <div class="r2"><span>周三 08:04</span><span>28 分钟</span><span>1.60 元/kWh</span></div>
+                  </div>
+                  <div class="dr"><b>31.2<s>kWh</s></b><em>¥49.9</em></div>
+                </li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <!-- ========== 统计 ========== -->
+        <section class="view" data-view="insights">
+          <div class="grid">
+
+            <article class="card c-full" style="--sp:8">
+              <div class="cap"><svg class="ico"><use href="#i-chart"/></svg>月度能耗<span class="more">Wh/km · 近 12 个月</span></div>
+              <div class="chartbox"><svg id="monthEnergy" viewBox="0 0 300 110"></svg></div>
+              <div class="xaxis"><span>11月</span><span>2月</span><span>5月</span><span>8月</span><span>10月</span></div>
+            </article>
+
+            <article class="card c-half vfill" style="--sp:4">
+              <div class="cap"><svg class="ico"><use href="#i-battery"/></svg>电池健康</div>
+              <div class="bigstat"><b>96.2<s>%</s></b></div>
+              <div class="chartbox fillchart"><svg id="sohCurve" viewBox="0 0 300 70" preserveAspectRatio="none"></svg></div>
+              <div class="note">可用容量 74.1 / 77.4 kWh<br>24 个月衰减 3.8%，属正常区间</div>
+            </article>
+
+            <article class="card c-half" style="--sp:4">
+              <div class="cap"><svg class="ico"><use href="#i-coins"/></svg>本月省下的油钱</div>
+              <div class="bigstat"><b>684<s>元</s></b></div>
+              <div class="note">按同级别燃油车 8.2 L/100km、7.8 元/L 折算<br>累计已省 <b style="color:var(--t1)">12,860 元</b></div>
+              <div style="margin-top:10px"><span class="tagline">相当于 3 年保险</span></div>
+            </article>
+
+            <article class="card c-half" style="--sp:4">
+              <div class="cap"><svg class="ico"><use href="#i-temp"/></svg>停车掉电</div>
+              <div class="bigstat"><b>0.4<s>%/天</s></b></div>
+              <div class="chartbox"><svg id="vampBars" viewBox="0 0 300 60"></svg></div>
+              <div class="note">近 7 天 · 哨兵开启 2 天<br>高于同级均值 0.1 个百分点</div>
+            </article>
+
+            <article class="card c-half" style="--sp:4">
+              <div class="cap"><svg class="ico"><use href="#i-pin"/></svg>常去地点</div>
+              <ul class="places">
+                <li><span>家</span><span class="bar"><i style="width:100%"></i></span><em>42 次</em></li>
+                <li><span>公司</span><span class="bar"><i style="width:76%"></i></span><em>32 次</em></li>
+                <li><span>望京</span><span class="bar"><i style="width:31%"></i></span><em>13 次</em></li>
+                <li><span>首都机场</span><span class="bar"><i style="width:14%"></i></span><em>6 次</em></li>
+              </ul>
+            </article>
+
+            <article class="card c-full" style="--sp:12">
+              <div class="cap"><svg class="ico"><use href="#i-shield"/></svg>更多看板<span class="more">卡片可自由排列 / 隐藏</span></div>
+              <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+                <div class="empty" style="padding:20px 12px"><svg class="ico"><use href="#i-gauge"/></svg>驾驶行为分析</div>
+                <div class="empty" style="padding:20px 12px"><svg class="ico"><use href="#i-clock"/></svg>时段热力图</div>
+                <div class="empty" style="padding:20px 12px"><svg class="ico"><use href="#i-shield"/></svg>哨兵与安全事件</div>
+                <div class="empty" style="padding:20px 12px"><svg class="ico"><use href="#i-temp"/></svg>温度与能耗相关性</div>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+        <section class="view" data-view="none">
+          <div class="empty" style="margin-top:20px">
+            <svg class="ico"><use href="#i-set"/></svg>
+            设置页不在本次评审范围
+          </div>
+        </section>
+
+      </div>
+
+      <nav class="tabbar">
+        <button class="on" data-go="overview"><svg class="ico"><use href="#i-gauge"/></svg><span>概览</span></button>
+        <button data-go="drives"><svg class="ico"><use href="#i-route"/></svg><span>行程</span></button>
+        <button data-go="charging"><svg class="ico"><use href="#i-bolt"/></svg><span>充电</span></button>
+        <button data-go="insights"><svg class="ico"><use href="#i-chart"/></svg><span>统计</span></button>
+      </nav>
+    </main>
+  </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var css = getComputedStyle(document.documentElement);
+  function C(n){ return css.getPropertyValue(n).trim(); }
+
+  /* 设备切换（支持 ?vp=820 直链） */
+  var app = document.getElementById('app');
+  function setVp(vp){
+    document.documentElement.style.setProperty('--vp', vp + 'px');
+    document.querySelectorAll('#segDevice button').forEach(function(x){
+      x.classList.toggle('on', x.dataset.vp === String(vp));
+    });
+  }
+  document.getElementById('segDevice').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    setVp(b.dataset.vp);
+  });
+
+  /* 明暗 */
+  document.getElementById('btnTheme').addEventListener('click', function(){
+    var h = document.documentElement;
+    h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+    drawAll();
+  });
+
+  /* 导航 */
+  var titles = {overview:'概览', drives:'行程', charging:'充电', insights:'统计', none:'设置'};
+  function go(name, anim){
+    if(!document.querySelector('[data-view="'+name+'"]')) return;
+    anim = anim !== false;
+    document.querySelectorAll('.view').forEach(function(v){
+      var hit = v.dataset.view === name;
+      v.classList.toggle('on', hit);
+      v.classList.toggle('anim', hit && anim);
+    });
+    document.querySelectorAll('[data-go]').forEach(function(b){ b.classList.toggle('on', b.dataset.go===name); });
+    document.getElementById('pageTitle').textContent = titles[name] || '概览';
+    document.querySelector('.views').scrollTop = 0;
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-go]'); if(!b) return;
+    go(b.dataset.go);
+  });
+
+  /* 图表工具 */
+  function path(d, w, h, pad, lo, hi){
+    var min = (lo!=null) ? lo : Math.min.apply(null,d);
+    var max = (hi!=null) ? hi : Math.max.apply(null,d);
+    var span = (max-min)||1, out='';
+    for(var i=0;i<d.length;i++){
+      var x = pad + i*(w-pad*2)/(d.length-1);
+      var y = h-pad - (d[i]-min)/span*(h-pad*2);
+      if(i===0){ out = 'M'+x.toFixed(1)+','+y.toFixed(1); }
+      else{
+        var px = pad + (i-1)*(w-pad*2)/(d.length-1);
+        var py = h-pad - (d[i-1]-min)/span*(h-pad*2);
+        var cx = (px+x)/2;
+        out += ' C'+cx.toFixed(1)+','+py.toFixed(1)+' '+cx.toFixed(1)+','+y.toFixed(1)+' '+x.toFixed(1)+','+y.toFixed(1);
+      }
+    }
+    return out;
+  }
+  function area(id, d, color, base, dom){
+    var el = document.getElementById(id); if(!el) return;
+    var w=300,h=base||110,pad=8;
+    var lo = dom?dom[0]:null, hi = dom?dom[1]:null;
+    var p = path(d,w,h,pad,lo,hi);
+    var lastX = pad + (d.length-1)*(w-pad*2)/(d.length-1);
+    var min = (lo!=null)?lo:Math.min.apply(null,d), max=(hi!=null)?hi:Math.max.apply(null,d), span=(max-min)||1;
+    var lastY = h-pad - (d[d.length-1]-min)/span*(h-pad*2);
+    el.setAttribute('viewBox','0 0 '+w+' '+h);
+    el.innerHTML =
+      '<path d="'+p+' L'+lastX.toFixed(1)+','+h+' L'+pad+','+h+' Z" fill="'+color+'" opacity=".07"/>'+
+      '<path d="'+p+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'+
+      '<circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="3" fill="'+color+'"/>'+
+      '<circle cx="'+lastX.toFixed(1)+'" cy="'+lastY.toFixed(1)+'" r="7" fill="'+color+'" opacity=".16"/>';
+  }
+  function bars(id, d, color, opts){
+    var el = document.getElementById(id); if(!el) return;
+    opts = opts || {};
+    var w=300,h=opts.h||90,pad=8,gap=4,n=d.length;
+    var max = Math.max.apply(null,d)||1;
+    var bw = (w-pad*2-gap*(n-1))/n;
+    var s='';
+    for(var i=0;i<n;i++){
+      var bh = Math.max(2,(d[i]/max)*(h-pad*2));
+      var x = pad + i*(bw+gap);
+      var y = h-pad-bh;
+      var c = (opts.hl!=null && i===opts.hl) ? (opts.hlColor||color) : color;
+      var op = (opts.hl!=null && i!==opts.hl) ? .35 : 1;
+      s += '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="'+(opts.rx||3)+'" fill="'+c+'" opacity="'+op+'"/>';
+    }
+    el.setAttribute('viewBox','0 0 '+w+' '+h);
+    el.innerHTML = s;
+  }
+
+  function drawAll(){
+    area('energy14', [131,145,128,148,138,132,143,124,152,136,131,158,140,135], C('--red'), 110, [115,175]);
+    area('chgCurve', [29,45,58,64,66,67,68,68,68,68], C('--green'), 90, [20,74]);
+    area('monthEnergy', [152,148,141,136,129,124,121,118,126,133,139,142], C('--red'), 110, [100,170]);
+    area('sohCurve', [100,99.6,99.2,98.8,98.4,98.0,97.6,97.2,96.9,96.6,96.2], C('--blue'), 70, [94,100.6]);
+    bars('vampBars', [0.3,0.5,0.4,0.6,0.3,0.5,0.4], C('--amber'), {h:60, hl:3, hlColor:C('--red'), rx:2});
+    bars('chargeSlots', [26,18,12,3,1,2,4,9,7,4,3,2], C('--green'), {h:90, hl:0, hlColor:C('--green'), rx:2});
+    bars('costMix', [116,10], C('--green'), {h:90, hl:1, hlColor:C('--amber'), rx:3});
+  }
+  /* 深链：?vp=390|820|1440 &view=overview|drives|charging|insights */
+  var qs = new URLSearchParams(location.search);
+  var qvp = qs.get('vp');
+  setVp(qvp && ['390','820','1440'].indexOf(qvp) >= 0 ? qvp : '390');
+  var qth = qs.get('theme');
+  if(qth === 'light' || qth === 'dark') document.documentElement.dataset.theme = qth;
+  var qv = qs.get('view');
+  if(qv && titles[qv]) go(qv, false);
+  if(qs.get('clean') === '1') document.body.classList.add('clean');
+
+  drawAll();
+  window.addEventListener('resize', function(){ /* 容器查询自动生效，无需重算 */ });
+
+  /* 实时感：同步计时 + 充电增量 */
+  var t = 8, kwh = 18.4;
+  setInterval(function(){
+    t++; if(t>59) t=0;
+    document.getElementById('syncTop').textContent = t;
+    document.getElementById('syncSide').textContent = t;
+  }, 1000);
+  setInterval(function(){
+    kwh += 0.0031;
+    document.getElementById('chgKwh').innerHTML = kwh.toFixed(2)+'<s>kWh</s>';
+    document.getElementById('chgCost').innerHTML = (kwh*0.32).toFixed(2)+'<s>元</s>';
+  }, 3000);
+})();
+</script>
+</body>
+</html>
