@@ -14,7 +14,7 @@ export function Places({ places }: { places: Place[] }) {
   const max = Math.max(...places.map((place) => place.visits));
 
   return (
-    <Card span="half" cols={4}>
+    <Card span="half" cols={4} id="sec-places">
       <Cap icon={MapPin} title={t("card.places")} />
       <ul className="dist">
         {places.map((place) => (

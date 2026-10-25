@@ -68,6 +68,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Keyboard users get a ring; mouse and touch users never see one. */
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--blue) 65%, transparent);
+  outline-offset: 2px;
+}
+
 /* Numbers must not reflow while they change. */
 .num {
   font-variant-numeric: tabular-nums;
@@ -146,6 +152,7 @@ body {
   display: flex;
   align-items: center;
   gap: 11px;
+  text-decoration: none;
   padding: 10px 12px;
   border-radius: 10px;
   color: var(--t2);
@@ -249,20 +256,97 @@ body {
 }
 
 .views {
+  --pad-x: 16px;
+  --pad-b: 18px;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 16px 18px;
+  padding: 0 var(--pad-x) var(--pad-b);
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 @container app (min-width: 640px) {
   .views {
-    padding: 0 22px 22px;
+    --pad-x: 22px;
+    --pad-b: 22px;
   }
 }
 @container app (min-width: 1024px) {
   .views {
-    padding: 0 26px 26px;
+    --pad-x: 26px;
+    --pad-b: 26px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   In-page navigation: the sticky section bar on Insights and the month filter on
+   Drives. Same chip, two containers — one sticks, one scrolls sideways.
+   --------------------------------------------------------------------------- */
+.sectionnav {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  gap: 6px;
+  margin: 0 calc(-1 * var(--pad-x)) 12px;
+  padding: 8px var(--pad-x) 10px;
+  overflow-x: auto;
+  /* Opaque, not blurred: a backdrop filter over a card grid shifts the panel
+     colour by a few percent, which reads as a stray lighter band at the top. */
+  background: var(--bg);
+  scrollbar-width: none;
+}
+.sectionnav::-webkit-scrollbar {
+  display: none;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--t2);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.14s,
+    color 0.14s,
+    border-color 0.14s;
+}
+.chip:hover {
+  border-color: var(--line2);
+  color: var(--t1);
+}
+.chip[aria-pressed="true"] {
+  background: var(--t1);
+  border-color: var(--t1);
+  color: var(--bg);
+  font-weight: 500;
+}
+
+/* The refresh button spins while the stream is not live: the click is acknowledged
+   by the thing it is waiting for, not by a toast. */
+.turning {
+  animation: turning 1s linear infinite;
+}
+@keyframes turning {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -736,9 +820,18 @@ body {
     background-position: 0 50%;
   }
 }
+/* Respect the OS setting once, for everything that moves. */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
   .skeleton {
     animation: none;
+    background: var(--card2);
   }
 }
 
@@ -826,6 +919,7 @@ body {
 }
 .tab {
   flex: 1;
+  text-decoration: none;
   border: 0;
   background: transparent;
   color: var(--t3);

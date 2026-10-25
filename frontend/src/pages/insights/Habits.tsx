@@ -16,7 +16,7 @@ export function Habits({ habits }: { habits: HabitsData }) {
   const nightShare = Math.round((habits.night_drives / habits.drives) * 100);
 
   return (
-    <Card span="half" cols={4}>
+    <Card span="half" cols={4} id="sec-habits">
       <Cap icon={Gauge} title={t("card.drivingHabits")} aside={`${num(habits.drives)} ${t("kpi.drives")}`} />
 
       <div className="kpi-value" style={{ fontSize: 30 }}>

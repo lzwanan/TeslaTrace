@@ -12,7 +12,7 @@ export function Charging({ profile }: { profile: ChargingProfile }) {
   if (profile.sessions === 0) return null;
 
   return (
-    <Card span="half" cols={4}>
+    <Card span="half" cols={4} id="sec-charging">
       <Cap icon={PlugZap} title={t("card.chargingHabits")} aside={t("stats.sessions", { n: profile.sessions })} />
 
       <Dist

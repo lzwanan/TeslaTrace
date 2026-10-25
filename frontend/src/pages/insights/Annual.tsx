@@ -23,7 +23,7 @@ export function Annual({ yearly }: { yearly: Yearly[] }) {
       : null;
 
   return (
-    <Card span="full" cols={12}>
+    <Card span="full" cols={12} id="sec-year">
       <Cap
         icon={CalendarRange}
         title={t("card.annual")}

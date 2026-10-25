@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { Gauge, Moon, Route, Sun, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Gauge, Moon, RefreshCw, Route, Sun, TrendingUp } from "lucide-react";
 
 import { StatePill, humanAge } from "./components/StatePill";
-import { Skeleton } from "./components/ui";
+import { Card, Skeleton } from "./components/ui";
 import { apiGet, ApiError, authToken } from "./lib/api";
 import { ageSeconds } from "./lib/format";
 import { useI18n } from "./lib/i18n";
 import { useNow, useSummaryStream } from "./lib/live";
+import { applyTheme, readTheme, saveTheme } from "./lib/theme";
 import type { Car } from "./lib/types";
 import { Drives } from "./pages/Drives";
 import { Insights } from "./pages/insights";
@@ -22,11 +23,15 @@ export function App() {
   const now = useNow();
 
   const [route, setRoute] = useState<Route>(readRoute);
-  const [theme, setTheme] = useState<"dark" | "light">(readTheme);
+  const [theme, setTheme] = useState(readTheme);
   const [cars, setCars] = useState<Car[] | null>(null);
   const [carId, setCarId] = useState<number | undefined>();
   const [failure, setFailure] = useState<number | null>(null);
-  const [tokenVersion, setTokenVersion] = useState(0);
+  const [attempt, setAttempt] = useState(0);
+  /** Bumped by the refresh button so views refetch instead of waiting for a reload. */
+  const [nonce, setNonce] = useState(0);
+
+  const viewsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onHash = () => setRoute(readRoute());
@@ -35,9 +40,15 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("teslatrace.theme", theme);
+    applyTheme(theme);
+    saveTheme(theme);
   }, [theme]);
+
+  // Each tab remembers its own scroll position only by accident otherwise: leaving
+  // a long list and coming back lands you in the middle of it.
+  useEffect(() => {
+    viewsRef.current?.scrollTo({ top: 0 });
+  }, [route, carId]);
 
   useEffect(() => {
     let alive = true;
@@ -54,9 +65,9 @@ export function App() {
     return () => {
       alive = false;
     };
-  }, [tokenVersion]);
+  }, [attempt]);
 
-  const { summary, status } = useSummaryStream(carId);
+  const { summary, status } = useSummaryStream(carId, nonce);
 
   const updated = useMemo(() => {
     if (!summary?.live.updated_at) return t("ui.offline");
@@ -64,23 +75,49 @@ export function App() {
     return age === null ? t("ui.offline") : t("ui.updated", { time: humanAge(age, t) });
   }, [summary?.live.updated_at, now, t]);
 
-  if (failure === 401) {
-    return <TokenGate onSubmit={() => setTokenVersion((v) => v + 1)} />;
-  }
+  const chrome = (
+    <div className="top-actions">
+      {cars && cars.length > 1 && carId ? (
+        <CarCycle cars={cars} current={carId} onPick={setCarId} />
+      ) : null}
 
-  if (failure !== null) {
-    return (
-      <div className="centered">
-        <div className="panel">
-          <h2>{t("ui.error")}</h2>
-          <p>{failure === 0 ? t("ui.error") : `HTTP ${failure}`}</p>
-          <button className="btn primary" type="button" onClick={() => setTokenVersion((v) => v + 1)}>
-            {t("ui.retry")}
-          </button>
-        </div>
-      </div>
-    );
-  }
+      {summary?.live ? <StatePill live={summary.live} now={now} /> : null}
+
+      <button
+        className="icon-btn"
+        type="button"
+        title={t("ui.refresh")}
+        aria-label={t("ui.refresh")}
+        onClick={() => setNonce((value) => value + 1)}
+      >
+        <RefreshCw size={15} className={status === "live" ? undefined : "turning"} />
+      </button>
+
+      <button
+        className="icon-btn lang-btn"
+        type="button"
+        title={t("ui.language")}
+        aria-label={t("ui.language")}
+        onClick={() => setLang(lang === "zh" ? "en" : "zh")}
+      >
+        {lang === "zh" ? "EN" : "中"}
+      </button>
+
+      <button
+        className="icon-btn theme-btn"
+        type="button"
+        title={t("ui.theme")}
+        aria-label={t("ui.theme")}
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      >
+        {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+      </button>
+    </div>
+  );
+
+  // A token prompt and a broken API both leave the shell usable: the theme and
+  // language switches are exactly what someone reaches for when a page looks wrong.
+  if (failure === 401) return <TokenGate chrome={chrome} onSubmit={() => setAttempt((v) => v + 1)} />;
 
   return (
     <div className="shell">
@@ -96,20 +133,20 @@ export function App() {
             </div>
           </div>
 
-          {ROUTES.map((item) => (
-            <a
-              key={item}
-              className="nav-item"
-              href={`#/${item}`}
-              aria-current={route === item ? "page" : undefined}
-            >
-              {(() => {
-                const Icon = ROUTE_ICON[item];
-                return <Icon size={18} />;
-              })()}
-              {t(`nav.${item}`)}
-            </a>
-          ))}
+          {ROUTES.map((item) => {
+            const Icon = ROUTE_ICON[item];
+            return (
+              <a
+                key={item}
+                className="nav-item"
+                href={`#/${item}`}
+                aria-current={route === item ? "page" : undefined}
+              >
+                <Icon size={18} />
+                {t(`nav.${item}`)}
+              </a>
+            );
+          })}
 
           <div className="side-foot">
             {status === "live" ? t("ui.live") : t("ui.reconnecting")}
@@ -126,44 +163,28 @@ export function App() {
                 {summary?.car.label ?? "TeslaTrace"} · {updated}
               </p>
             </div>
-
-            <div className="top-actions">
-              {cars && cars.length > 1 ? (
-                <CarCycle cars={cars} current={carId} onPick={setCarId} />
-              ) : null}
-
-              {summary?.live ? <StatePill live={summary.live} now={now} /> : null}
-
-              <button
-                className="icon-btn lang-btn"
-                type="button"
-                title={t("ui.language")}
-                aria-label={t("ui.language")}
-                onClick={() => setLang(lang === "zh" ? "en" : "zh")}
-              >
-                {lang === "zh" ? "EN" : "中"}
-              </button>
-
-              <button
-                className="icon-btn theme-btn"
-                type="button"
-                title={t("ui.theme")}
-                aria-label={t("ui.theme")}
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
-              </button>
-            </div>
+            {chrome}
           </header>
 
-          <div className="views">
-            {summary ? (
+          <div className="views" ref={viewsRef}>
+            {failure !== null ? (
+              <div className="cards">
+                <Card span="full" cols={12}>
+                  <div className="empty">
+                    <div>{failure === 0 ? t("ui.error") : `${t("ui.error")} · HTTP ${failure}`}</div>
+                    <button className="btn" type="button" onClick={() => setAttempt((v) => v + 1)}>
+                      {t("ui.retry")}
+                    </button>
+                  </div>
+                </Card>
+              </div>
+            ) : summary ? (
               route === "overview" ? (
                 <Overview summary={summary} />
               ) : route === "drives" ? (
-                <Drives summary={summary} />
+                <Drives summary={summary} nonce={nonce} />
               ) : (
-                <Insights summary={summary} />
+                <Insights summary={summary} nonce={nonce} />
               )
             ) : (
               <LoadingGrid />
@@ -171,21 +192,15 @@ export function App() {
           </div>
 
           <nav className="tabbar">
-            {ROUTES.map((item) => (
-              <a
-                key={item}
-                className="tab"
-                href={`#/${item}`}
-                aria-current={route === item ? "page" : undefined}
-                style={{ textDecoration: "none" }}
-              >
-                {(() => {
-                  const Icon = ROUTE_ICON[item];
-                  return <Icon size={21} />;
-                })()}
-                <span>{t(`nav.${item}`)}</span>
-              </a>
-            ))}
+            {ROUTES.map((item) => {
+              const Icon = ROUTE_ICON[item];
+              return (
+                <a key={item} className="tab" href={`#/${item}`} aria-current={route === item ? "page" : undefined}>
+                  <Icon size={21} />
+                  <span>{t(`nav.${item}`)}</span>
+                </a>
+              );
+            })}
           </nav>
         </main>
       </div>
@@ -219,34 +234,49 @@ function CarCycle({
   );
 }
 
-function TokenGate({ onSubmit }: { onSubmit: () => void }) {
+function TokenGate({ chrome, onSubmit }: { chrome: React.ReactNode; onSubmit: () => void }) {
   const { t } = useI18n();
   const [value, setValue] = useState("");
 
   return (
-    <div className="centered">
-      <div className="panel">
-        <h2>{t("ui.authTitle")}</h2>
-        <p>{t("ui.authHint")}</p>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            authToken.set(value.trim());
-            onSubmit();
-          }}
-        >
-          <input
-            className="field"
-            type="password"
-            autoFocus
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            placeholder="AUTH_TOKEN"
-          />
-          <button className="btn primary" type="submit" disabled={!value.trim()}>
-            {t("ui.authSave")}
-          </button>
-        </form>
+    <div className="shell">
+      <div className="app">
+        <main className="main">
+          <header className="topbar">
+            <div className="title">
+              <h1>TeslaTrace</h1>
+              <p>{t("ui.authTitle")}</p>
+            </div>
+            {chrome}
+          </header>
+          <div className="views">
+            <div className="centered">
+              <div className="panel">
+                <h2>{t("ui.authTitle")}</h2>
+                <p>{t("ui.authHint")}</p>
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    authToken.set(value.trim());
+                    onSubmit();
+                  }}
+                >
+                  <input
+                    className="field"
+                    type="password"
+                    autoFocus
+                    value={value}
+                    onChange={(event) => setValue(event.target.value)}
+                    placeholder="AUTH_TOKEN"
+                  />
+                  <button className="btn primary" type="submit" disabled={!value.trim()}>
+                    {t("ui.authSave")}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
@@ -276,10 +306,4 @@ function LoadingGrid() {
 function readRoute(): Route {
   const value = window.location.hash.replace(/^#\/?/, "");
   return (ROUTES as string[]).includes(value) ? (value as Route) : "overview";
-}
-
-function readTheme(): "dark" | "light" {
-  const saved = localStorage.getItem("teslatrace.theme");
-  if (saved === "light" || saved === "dark") return saved;
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }

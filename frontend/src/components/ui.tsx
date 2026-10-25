@@ -17,6 +17,7 @@ export function Card({
   cols,
   className = "",
   tone,
+  id,
   children,
 }: {
   span?: Span;
@@ -24,6 +25,8 @@ export function Card({
   cols?: number;
   className?: string;
   tone?: Tone;
+  /** Anchor for the in-page section nav; set on the first card of a section. */
+  id?: string;
   children: ReactNode;
 }) {
   const style: CSSProperties = {};
@@ -31,7 +34,7 @@ export function Card({
   if (tone) style["--tone" as keyof CSSProperties] = `var(--${tone})` as never;
 
   return (
-    <article className={`card ${SPAN_CLASS[span]} ${className}`} style={style}>
+    <article id={id} className={`card ${SPAN_CLASS[span]} ${className}`} style={style}>
       {children}
     </article>
   );

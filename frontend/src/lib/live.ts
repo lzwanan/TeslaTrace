@@ -6,17 +6,20 @@
  * state in the UI instead of pretending the numbers are always fresh.
  */
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { streamUrl } from "./api";
 import type { LiveState, Summary } from "./types";
 
 export type StreamStatus = "connecting" | "live" | "reconnecting";
 
-export function useSummaryStream(carId: number | undefined) {
+/**
+ * `nonce` is the manual refresh: bumping it drops the stream and opens a new one,
+ * which re-sends the full snapshot. No polling, no second code path.
+ */
+export function useSummaryStream(carId: number | undefined, nonce = 0) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [status, setStatus] = useState<StreamStatus>("connecting");
-  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!carId) return;
@@ -43,10 +46,9 @@ export function useSummaryStream(carId: number | undefined) {
     source.addEventListener("error", () => setStatus("reconnecting"));
 
     return () => source.close();
-  }, [carId, attempt]);
+  }, [carId, nonce]);
 
-  const retry = useCallback(() => setAttempt((value) => value + 1), []);
-  return { summary, status, retry };
+  return { summary, status };
 }
 
 let clockTimer: number | undefined;

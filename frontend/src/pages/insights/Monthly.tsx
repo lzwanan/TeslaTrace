@@ -25,7 +25,7 @@ export function Monthly({ stats, summary, months }: { stats: Stats; summary: Sum
 
   return (
     <>
-      <Card span="full" cols={8}>
+      <Card span="full" cols={8} id="sec-month">
         <Cap icon={TrendingUp} title={t("card.monthlyKm")} aside={t("card.totals", { n: months })} />
         <Bars
           data={series.map((month, index) => ({ label: labels[index], value: month.km }))}
