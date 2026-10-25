@@ -43,7 +43,8 @@ class FakeStore:
     async def driving_stats(self, car_id, tz, now=None):
         return {"today_drives": 2, "today_km": 42.6, "month_drives": 38, "month_km": 1284.0}
 
-    async def recent_drives(self, car_id, limit=20, before=None):
+    async def recent_drives(self, car_id, limit=20, before=None, since=None):
+        self.last_since = since
         return [
             {
                 "id": 900,
@@ -173,6 +174,15 @@ def test_drive_duration_is_derived_when_the_column_is_null():
         drive = client.get("/api/v1/drives").json()["drives"][0]
 
     assert drive["duration_min"] == 24  # 09:32:54 -> 09:57:17 rounded
+
+
+def test_drives_month_filter_reaches_the_store():
+    store = FakeStore()
+    with make_client(store=store) as client:
+        client.get("/api/v1/drives", params={"since": "2026-10-01T00:00:00Z"})
+
+    assert store.last_since is not None
+    assert store.last_since.year == 2026 and store.last_since.month == 10
 
 
 def test_missing_car_is_a_404():
