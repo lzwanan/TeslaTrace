@@ -10,27 +10,8 @@
     <meta name="description" content="TeslaTrace — your car, your data, one glance." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>TeslaTrace</title>
-    <script>
-      /* Runs before the first paint. Without it the shell renders dark and then
-         flips to light, which reads as a bug on every reload. */
-      (function () {
-        try {
-          var saved = localStorage.getItem("teslatrace.theme");
-          var dark =
-            saved === "dark" || saved === "light"
-              ? saved === "dark"
-              : !window.matchMedia("(prefers-color-scheme: light)").matches;
-          var root = document.documentElement;
-          root.dataset.theme = dark ? "dark" : "light";
-          root.style.colorScheme = dark ? "dark" : "light";
-          document
-            .querySelector('meta[name="theme-color"]')
-            .setAttribute("content", dark ? "#0A0E13" : "#EFF2F5");
-        } catch (error) {
-          /* Private mode with storage disabled: the dark default is fine. */
-        }
-      })();
-    </script>
+    <!-- Blocking on purpose: it must land before the first paint, and it is 600 bytes. -->
+    <script src="/theme-boot.js"></script>
   </head>
   <body>
     <div id="root"></div>

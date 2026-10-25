@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Gauge, Moon, RefreshCw, Route, Sun, TrendingUp } from "lucide-react";
+import { Gauge, LogOut, Moon, RefreshCw, Route, ShieldPlus, Sun, TrendingUp, X } from "lucide-react";
 
 import { StatePill, humanAge } from "./components/StatePill";
 import { Card, Skeleton } from "./components/ui";
-import { apiGet, ApiError, authToken } from "./lib/api";
+import { apiGet, ApiError, session, type Session } from "./lib/api";
 import { ageSeconds } from "./lib/format";
 import { useI18n } from "./lib/i18n";
 import { useNow, useSummaryStream } from "./lib/live";
@@ -18,18 +18,23 @@ const ROUTES: Route[] = ["overview", "drives", "insights"];
 
 const ROUTE_ICON = { overview: Gauge, drives: Route, insights: TrendingUp } as const;
 
+/** Set once the "no token configured" warning has been read and dismissed. */
+const NOTICE_KEY = "teslatrace.open-notice";
+
 export function App() {
   const { t, lang, setLang } = useI18n();
   const now = useNow();
 
   const [route, setRoute] = useState<Route>(readRoute);
   const [theme, setTheme] = useState(readTheme);
+  const [auth, setAuth] = useState<Session | null>(null);
   const [cars, setCars] = useState<Car[] | null>(null);
   const [carId, setCarId] = useState<number | undefined>();
   const [failure, setFailure] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   /** Bumped by the refresh button so views refetch instead of waiting for a reload. */
   const [nonce, setNonce] = useState(0);
+  const [notice, setNotice] = useState(() => localStorage.getItem(NOTICE_KEY) !== "1");
 
   const viewsRef = useRef<HTMLDivElement>(null);
 
@@ -44,23 +49,36 @@ export function App() {
     saveTheme(theme);
   }, [theme]);
 
-  // Each tab remembers its own scroll position only by accident otherwise: leaving
-  // a long list and coming back lands you in the middle of it.
+  // Each tab would otherwise keep the previous tab's scroll offset: leaving a long
+  // list and coming back lands you in the middle of it.
   useEffect(() => {
     viewsRef.current?.scrollTo({ top: 0 });
   }, [route, carId]);
 
+  // One request decides whether a login is needed at all, before asking for data.
   useEffect(() => {
     let alive = true;
-    apiGet<Car[]>("/cars")
-      .then((list) => {
+    setAuth(null);
+    session
+      .get()
+      .then(async (state) => {
+        if (!alive) return;
+        setAuth(state);
+        if (state.required && !state.authenticated) return;
+        const list = await apiGet<Car[]>("/cars");
         if (!alive) return;
         setCars(list);
         setFailure(null);
         setCarId((current) => current ?? list[0]?.id);
       })
       .catch((error) => {
-        if (alive) setFailure(error instanceof ApiError ? error.status : 0);
+        if (!alive) return;
+        // A cookie that expired mid-session is a login prompt, not an error page.
+        if (error instanceof ApiError && error.status === 401) {
+          setAuth({ required: true, authenticated: false });
+          return;
+        }
+        setFailure(error instanceof ApiError ? error.status : 0);
       });
     return () => {
       alive = false;
@@ -74,6 +92,22 @@ export function App() {
     const age = ageSeconds(summary.live.updated_at, now);
     return age === null ? t("ui.offline") : t("ui.updated", { time: humanAge(age, t) });
   }, [summary?.live.updated_at, now, t]);
+
+  const signOut = async () => {
+    try {
+      await session.close();
+    } finally {
+      setCars(null);
+      setCarId(undefined);
+      setFailure(null);
+      setAuth({ required: true, authenticated: false });
+    }
+  };
+
+  const dismissNotice = () => {
+    localStorage.setItem(NOTICE_KEY, "1");
+    setNotice(false);
+  };
 
   const chrome = (
     <div className="top-actions">
@@ -115,9 +149,9 @@ export function App() {
     </div>
   );
 
-  // A token prompt and a broken API both leave the shell usable: the theme and
-  // language switches are exactly what someone reaches for when a page looks wrong.
-  if (failure === 401) return <TokenGate chrome={chrome} onSubmit={() => setAttempt((v) => v + 1)} />;
+  if (auth !== null && auth.required && !auth.authenticated) {
+    return <TokenGate chrome={chrome} onSubmit={() => setAttempt((value) => value + 1)} />;
+  }
 
   return (
     <div className="shell">
@@ -152,6 +186,14 @@ export function App() {
             {status === "live" ? t("ui.live") : t("ui.reconnecting")}
             <br />
             {updated}
+            {auth?.required ? (
+              <>
+                <br />
+                <button className="linkish" type="button" onClick={() => void signOut()}>
+                  <LogOut size={12} /> {t("ui.logout")}
+                </button>
+              </>
+            ) : null}
           </div>
         </aside>
 
@@ -178,16 +220,21 @@ export function App() {
                   </div>
                 </Card>
               </div>
-            ) : summary ? (
-              route === "overview" ? (
-                <Overview summary={summary} />
-              ) : route === "drives" ? (
-                <Drives summary={summary} nonce={nonce} />
-              ) : (
-                <Insights summary={summary} nonce={nonce} />
-              )
             ) : (
-              <LoadingGrid />
+              <>
+                {auth && !auth.required && notice ? <OpenNotice onDismiss={dismissNotice} /> : null}
+                {summary ? (
+                  route === "overview" ? (
+                    <Overview summary={summary} />
+                  ) : route === "drives" ? (
+                    <Drives summary={summary} nonce={nonce} />
+                  ) : (
+                    <Insights summary={summary} nonce={nonce} />
+                  )
+                ) : (
+                  <LoadingGrid />
+                )}
+              </>
             )}
           </div>
 
@@ -195,7 +242,12 @@ export function App() {
             {ROUTES.map((item) => {
               const Icon = ROUTE_ICON[item];
               return (
-                <a key={item} className="tab" href={`#/${item}`} aria-current={route === item ? "page" : undefined}>
+                <a
+                  key={item}
+                  className="tab"
+                  href={`#/${item}`}
+                  aria-current={route === item ? "page" : undefined}
+                >
                   <Icon size={21} />
                   <span>{t(`nav.${item}`)}</span>
                 </a>
@@ -234,9 +286,49 @@ function CarCycle({
   );
 }
 
+/**
+ * Only shown while the dashboard runs without AUTH_TOKEN.
+ *
+ * The default is deliberately "open": a first run should show something, not a
+ * login box. But a page that shows where the car is parked has to say out loud
+ * that the neighbours can see it too.
+ */
+function OpenNotice({ onDismiss }: { onDismiss: () => void }) {
+  const { t } = useI18n();
+  return (
+    <div className="notice" role="status">
+      <ShieldPlus size={16} strokeWidth={1.8} />
+      <div>
+        <b>{t("ui.openTitle")}</b>
+        <span>{t("ui.openBody")}</span>
+      </div>
+      <button className="notice-x" type="button" aria-label={t("ui.dismiss")} onClick={onDismiss}>
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
 function TokenGate({ chrome, onSubmit }: { chrome: React.ReactNode; onSubmit: () => void }) {
   const { t } = useI18n();
   const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await session.open(value.trim());
+      onSubmit();
+    } catch (failure) {
+      const status = failure instanceof ApiError ? failure.status : 0;
+      setError(status === 429 ? t("ui.authThrottled") : t("ui.authWrong"));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="shell">
@@ -254,25 +346,21 @@ function TokenGate({ chrome, onSubmit }: { chrome: React.ReactNode; onSubmit: ()
               <div className="panel">
                 <h2>{t("ui.authTitle")}</h2>
                 <p>{t("ui.authHint")}</p>
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    authToken.set(value.trim());
-                    onSubmit();
-                  }}
-                >
+                <form onSubmit={submit}>
                   <input
                     className="field"
                     type="password"
                     autoFocus
+                    autoComplete="current-password"
                     value={value}
                     onChange={(event) => setValue(event.target.value)}
                     placeholder="AUTH_TOKEN"
                   />
-                  <button className="btn primary" type="submit" disabled={!value.trim()}>
-                    {t("ui.authSave")}
+                  <button className="btn primary" type="submit" disabled={!value.trim() || busy}>
+                    {busy ? t("ui.authChecking") : t("ui.authSave")}
                   </button>
                 </form>
+                {error ? <div className="form-error">{error}</div> : null}
               </div>
             </div>
           </div>

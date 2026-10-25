@@ -13,7 +13,7 @@ from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
-from .api import health_router, router
+from .api import health_router, router, session_router
 from .config import Settings
 from .db import open_pool
 from .events import Hub
@@ -26,6 +26,30 @@ log = logging.getLogger("teslatrace")
 # Built by `npm run build` in frontend/ and copied here by the Dockerfile. Absent when
 # running the backend alone, which is the normal case for development.
 WEB_DIR = Path(__file__).with_name("static")
+
+# `script-src 'self'` is why the theme is read from /theme-boot.js instead of an
+# inline <script>: one extra 400-byte request buys a policy with no 'unsafe-inline'.
+# connect-src 'self' lets the EventSource through; img-src data: covers the favicon.
+CSP = (
+    "default-src 'self'; "
+    "img-src 'self' data:; "
+    "style-src 'self' 'unsafe-inline'; "
+    "script-src 'self'; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'none'; "
+    "form-action 'self'"
+)
+
+# Swagger UI pulls its bundle from a CDN and inlines a boot script; it is the one
+# page a strict policy cannot cover.
+CSP_EXEMPT = ("/api/docs", "/api/openapi.json")
+
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+}
 
 
 def configure_logging(level: str) -> None:
@@ -101,7 +125,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         return response
 
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        for name, value in SECURITY_HEADERS.items():
+            response.headers.setdefault(name, value)
+        if not request.url.path.startswith(CSP_EXEMPT):
+            response.headers.setdefault("Content-Security-Policy", CSP)
+        return response
+
     app.include_router(health_router())
+    app.include_router(session_router(), prefix="/api/v1")
     app.include_router(router(), prefix="/api/v1")
 
     if WEB_DIR.is_dir():

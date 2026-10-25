@@ -13,10 +13,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 import orjson
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import ORJSONResponse
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from . import auth
 from .events import Hub
 from .live import LiveRegistry
 from .store import Store
@@ -41,19 +43,99 @@ def _hub(request: Request) -> Hub:
     return request.app.state.hub
 
 
-async def require_token(
-    request: Request,
-    token: str | None = Query(default=None, description="Only needed for SSE: EventSource cannot set headers."),
-) -> None:
-    expected = _settings(request).auth_token
-    if not expected:
-        return
-    supplied = token or ""
+def _throttle(request: Request) -> auth.Throttle:
+    """Created lazily so the guard costs nothing on an open dashboard."""
+    state = request.app.state
+    throttle = getattr(state, "throttle", None)
+    if throttle is None:
+        throttle = auth.Throttle()
+        state.throttle = throttle
+    return throttle
+
+
+def _client(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _is_https(request: Request) -> bool:
+    """Behind a reverse proxy the app sees http; the forwarded header is the truth."""
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    return forwarded == "https" or request.url.scheme == "https"
+
+
+def _authenticated(request: Request, secret: str) -> bool:
     header = request.headers.get("authorization", "")
-    if not supplied and header.lower().startswith("bearer "):
-        supplied = header[7:]
-    if not secrets.compare_digest(supplied, expected):
-        raise HTTPException(status_code=401, detail="invalid or missing token")
+    if header.lower().startswith("bearer ") and secrets.compare_digest(header[7:], secret):
+        return True
+    return auth.verify(secret, request.cookies.get(auth.COOKIE, ""))
+
+
+async def require_token(request: Request) -> None:
+    """Cookie first, bearer second.
+
+    The token used to be accepted as `?token=` for the sake of `EventSource`, which
+    cannot set headers. It is gone: the stream is same-origin, so the cookie travels
+    with it, and the token stops appearing in access logs and browser history.
+    """
+    secret = _settings(request).auth_token
+    if not secret:
+        return
+    if not _authenticated(request, secret):
+        raise HTTPException(status_code=401, detail="authentication required")
+
+
+class Credentials(BaseModel):
+    token: str
+
+
+def session_router() -> APIRouter:
+    """Unprotected on purpose: this is how a session is obtained in the first place."""
+
+    router_ = APIRouter(tags=["session"])
+
+    @router_.get("/session")
+    async def read_session(request: Request):
+        secret = _settings(request).auth_token
+        return {
+            "required": bool(secret),
+            "authenticated": (not secret) or _authenticated(request, secret),
+        }
+
+    @router_.post("/session", status_code=204)
+    async def open_session(request: Request, response: Response, body: Credentials):
+        secret = _settings(request).auth_token
+        if not secret:
+            raise HTTPException(status_code=400, detail="this dashboard has no token configured")
+
+        client = _client(request)
+        throttle = _throttle(request)
+        if throttle.blocked(client):
+            log.warning("login throttled for %s", client)
+            raise HTTPException(status_code=429, detail="too many attempts, try again in a minute")
+
+        if not secrets.compare_digest(body.token, secret):
+            throttle.fail(client)
+            log.warning("failed login from %s", client)
+            raise HTTPException(status_code=401, detail="invalid token")
+
+        throttle.clear(client)
+        response.set_cookie(
+            auth.COOKIE,
+            auth.issue(secret),
+            max_age=auth.SESSION_SECONDS,
+            httponly=True,
+            samesite="strict",
+            secure=_is_https(request),
+            path="/",
+        )
+        log.info("session opened for %s", client)
+
+    @router_.delete("/session", status_code=204)
+    async def close_session(request: Request, response: Response):
+        response.delete_cookie(auth.COOKIE, path="/")
+        log.info("session closed for %s", _client(request))
+
+    return router_
 
 
 def _tz(settings):

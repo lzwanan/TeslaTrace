@@ -20,6 +20,8 @@ services:
       DATABASE_PASS: "${DATABASE_PASS:?set DATABASE_PASS in .env}"
       MQTT_HOST: mosquitto
       TZ: "${TZ:-Asia/Shanghai}"
+      # Generates a login. Leave it empty only on a network you trust: this page
+      # shows where the car is, right now.
       AUTH_TOKEN: "${AUTH_TOKEN:-}"
     ports:
       - "8000:8000"

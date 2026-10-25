@@ -110,20 +110,33 @@ Finally, reverse-proxy it with HTTPS and put an auth layer in front. **Do not ex
 | `MQTT_HOST` | `mosquitto` | TeslaMate's service name |
 | `MQTT_PORT` / `MQTT_USERNAME` / `MQTT_PASSWORD` | `1883` / — / — | Only if your broker needs auth |
 | `TZ` | `Asia/Shanghai` | Decides where "today" starts |
-| `AUTH_TOKEN` | empty | Empty means the API is open — fine on a LAN, never on the internet |
+| `AUTH_TOKEN` | empty | Empty means the API is open — fine on a LAN, never on the internet. See below |
 
 That is the whole surface. There is no per-car setting (cars are discovered from the database) and no coordinate setting (the API returns what TeslaMate stored).
+
+### Authentication
+
+Set `AUTH_TOKEN` and the dashboard asks for it once, then remembers you.
+
+- The token is exchanged for an **HttpOnly, SameSite=Strict session cookie** (30 days). JavaScript never holds the token, and it never appears in a URL — a stream that authenticates by query string leaks the secret into every access log and browser history.
+- Rotating `AUTH_TOKEN` invalidates every session at once. That is the whole revocation story, so there is nothing to store server side.
+- Scripts keep working: `Authorization: Bearer <token>` is still accepted on any endpoint.
+- Ten failed attempts per minute from one address are refused, which is what stops a short token from being guessed.
+- Leaving `AUTH_TOKEN` empty is supported, and the UI says so in a dismissible banner rather than pretending the dashboard is private.
 
 ## API
 
 ```
-GET /healthz                  database + broker status, for the container healthcheck
-GET /api/v1/cars              every car in this TeslaMate database
-GET /api/v1/live              current state (MQTT first, newest position as fallback)
-GET /api/v1/summary           the whole home screen in one request
-GET /api/v1/drives?limit=20   trip list, keyset paginated
-GET /api/v1/stats?months=6    monthly + yearly totals, cost, battery, charging and driving habits
-GET /api/v1/stream            SSE: one snapshot, then a frame per change
+GET    /healthz                database + broker status, for the container healthcheck
+GET    /api/v1/session         is a login required, and am I logged in
+POST   /api/v1/session         exchange AUTH_TOKEN for a session cookie
+DELETE /api/v1/session         sign out
+GET    /api/v1/cars            every car in this TeslaMate database
+GET    /api/v1/live            current state (MQTT first, newest position as fallback)
+GET    /api/v1/summary         the whole home screen in one request
+GET    /api/v1/drives          trip list, keyset paginated (`limit`, `before`, `since`)
+GET    /api/v1/stats?months=6  monthly + yearly totals, cost, battery, charging and driving habits
+GET    /api/v1/stream          SSE: one snapshot, then a frame per change
 ```
 
 ## Roadmap
@@ -134,7 +147,7 @@ GET /api/v1/stream            SSE: one snapshot, then a frame per change
 | P1    | FastAPI: read-only DB, MQTT → SSE, `/api/v1/summary`, `/drives`, healthcheck | ✅ done      |
 | P2    | React app: overview, drives, card registry, zh/en, dark and light            | ✅ done      |
 | P3    | Insights: monthly distance and cost, battery capacity from charge sessions   | ✅ done      |
-| P4    | Auth hardening, PWA, published image, Synology docs                          | 🚧 next      |
+| P4    | Auth: session cookie, throttling, CSP. PWA, image, Synology docs             | 🚧 in progress |
 | P5    | Trip replay, multi-car                                                       | ⬜           |
 
 
@@ -161,7 +174,7 @@ See [`docs/metrics.md`](docs/metrics.md) for the metric-by-metric feasibility no
 
 - **Parked energy cannot be attributed.** While the car is parked TeslaMate records essentially no power in `positions` — measured −14 W to +2 W during a camp-mode session that actually draws 500–1500 W. So a cost-per-kilometre figure derived from charge sessions includes climate, camp mode and standby drain, and reads higher than the consumption the car reports about itself. Splitting the two needs a full scan of `positions`: 1.1 s for one month, 6.8 s for six. Too slow for a page, and not worth a materialized view for a number you look at once a month.
 - **Cost is only as good as the tariff.** TeslaMate stores a price per session only when a tariff or a manual entry exists; on the reference database that is 357 of 501 sessions. Missing prices stay `null` rather than becoming zero.
-- **One token, no users.** `AUTH_TOKEN` is a single shared secret. Fine behind a reverse proxy that already authenticates you; not a multi-user system.
+- **One token, no users.** `AUTH_TOKEN` is a single shared secret, and a session says nothing about *who* is using it. Fine for a household; not a multi-user system, and there is no per-device revocation beyond rotating the token.
 
 ## Design decisions
 

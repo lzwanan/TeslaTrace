@@ -22,7 +22,13 @@ export function useSummaryStream(carId: number | undefined, nonce = 0) {
   const [status, setStatus] = useState<StreamStatus>("connecting");
 
   useEffect(() => {
-    if (!carId) return;
+    if (!carId) {
+      // Signing out drops the car: keeping the last snapshot on screen would leave
+      // someone else's dashboard behind the login box.
+      setSummary(null);
+      setStatus("connecting");
+      return;
+    }
     setStatus("connecting");
     const source = new EventSource(streamUrl(carId));
 

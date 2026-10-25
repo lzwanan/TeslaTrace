@@ -199,8 +199,13 @@ def test_token_guards_api_but_not_healthz():
         assert client.get("/api/v1/cars").status_code == 401
         assert client.get("/api/v1/cars", headers={"Authorization": "Bearer nope"}).status_code == 401
         assert client.get("/api/v1/cars", headers={"Authorization": "Bearer s3cret"}).status_code == 200
-        # EventSource cannot set headers, so the query parameter must work too.
-        assert client.get("/api/v1/cars?token=s3cret").status_code == 200
+
+
+def test_token_in_the_query_string_no_longer_works():
+    """It used to, for the sake of EventSource. It also put the token in every log."""
+    settings = Settings(auth_token="s3cret")
+    with make_client(settings=settings) as client:
+        assert client.get("/api/v1/cars?token=s3cret").status_code == 401
 
 
 def test_stream_is_routed_and_404s_without_a_car():
