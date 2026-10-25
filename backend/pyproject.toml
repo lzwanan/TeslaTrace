@@ -11,6 +11,9 @@ dependencies = [
     "sse-starlette==2.1.*",
     "orjson==3.10.*",
     "pydantic-settings==2.6.*",
+    # Needed by SettingsConfigDict(env_file=".env"): without it a local .env is
+    # silently ignored, which reads as "my password is wrong".
+    "python-dotenv==1.*",
 ]
 
 [project.optional-dependencies]

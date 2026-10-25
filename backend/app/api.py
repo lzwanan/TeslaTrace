@@ -207,12 +207,17 @@ async def _live_payload(request: Request, car_id: int) -> dict[str, Any]:
         "car_id": car_id,
         "source": "db",
         "battery_level": position.get("battery_level"),
-        "est_battery_range_km": position.get("est_battery_range_km"),
+        "est_battery_range_km": position.get("rated_battery_range_km"),
+        "rated_battery_range_km": position.get("rated_battery_range_km"),
         "odometer": position.get("odometer"),
         "latitude": position.get("latitude"),
         "longitude": position.get("longitude"),
         "speed": position.get("speed"),
         "power": position.get("power"),
+        "elevation": position.get("elevation"),
+        "inside_temp": position.get("inside_temp"),
+        "outside_temp": position.get("outside_temp"),
+        "is_climate_on": position.get("is_climate_on"),
         "updated_at": as_utc(position["date"]).timestamp(),
     }
 
@@ -369,6 +374,8 @@ def _drive_row(row: dict[str, Any]) -> dict[str, Any]:
         "to": row.get("to_place"),
         "from_lat": row.get("from_lat"),
         "from_lng": row.get("from_lng"),
+        "to_lat": row.get("to_lat"),
+        "to_lng": row.get("to_lng"),
     }
 
 

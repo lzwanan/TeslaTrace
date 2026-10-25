@@ -41,8 +41,14 @@ export function ChargingCard({ summary }: { summary: Summary }) {
       ) : (
         <>
           <div className="bigstat">{t("chg.notPlugged")}</div>
-          <div className="tiles-3" style={{ marginTop: 14 }}>
-            <Tile label={t("chg.target")} value={num(limit)} unit="%" />
+          {/* Without MQTT the charge limit is unknown. One full-width tile beats a
+              tile that says "—", which reads as a broken number rather than a
+              missing one. */}
+          <div
+            className="tiles-3"
+            style={{ marginTop: 14, gridTemplateColumns: `repeat(${limit ? 2 : 1}, minmax(0, 1fr))` }}
+          >
+            {limit ? <Tile label={t("chg.target")} value={num(limit)} unit="%" /> : null}
             <Tile label={t("kpi.battery")} value={num(live.battery_level)} unit="%" />
           </div>
         </>

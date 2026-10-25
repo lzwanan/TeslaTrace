@@ -55,6 +55,8 @@ export type Drive = {
   to: string | null;
   from_lat: number | null;
   from_lng: number | null;
+  to_lat: number | null;
+  to_lng: number | null;
 };
 
 export type Driving = {

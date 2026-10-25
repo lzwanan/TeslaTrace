@@ -32,6 +32,14 @@ class MqttFeed:
         self.connected = False
 
     async def run(self) -> None:
+        # An unexposed broker is a normal deployment, not a fault: TeslaMate keeps
+        # mosquitto on its own compose network and only publishes the web port, so
+        # the dashboard falls back to the newest row in `positions`. Retrying every
+        # 30 seconds forever would turn that into a wall of warnings.
+        if not self._settings.mqtt_host:
+            log.info("MQTT_HOST is empty — live state comes from the database only")
+            return
+
         backoff = 1.0
         while True:
             try:

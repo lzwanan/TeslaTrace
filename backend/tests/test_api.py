@@ -71,7 +71,7 @@ class FakeStore:
 
 
 def make_client(*, settings=None, store=None, live=None, connected=True, accounts=None) -> TestClient:
-    settings = settings or Settings()
+    settings = settings or Settings(_env_file=None)
     app = create_app(settings)
 
     @asynccontextmanager
@@ -131,14 +131,25 @@ def test_live_falls_back_to_last_position_before_mqtt_arrives():
         "speed": 0,
         "power": 0,
         "battery_level": 68,
-        "est_battery_range_km": 342.0,
+        "rated_battery_range_km": 342.0,
         "odometer": 23486.0,
+        "inside_temp": 21.5,
+        "outside_temp": 9.0,
+        "is_climate_on": True,
     }
     with make_client(store=FakeStore(position=position)) as client:
         body = client.get("/api/v1/summary").json()
 
     assert body["live"]["source"] == "db"
     assert body["live"]["battery_level"] == 68
+    # Tesla no longer fills est_battery_range_km; the rated figure is the one the
+    # card shows, so it has to survive the fallback under both names.
+    assert body["live"]["rated_battery_range_km"] == 342.0
+    assert body["live"]["est_battery_range_km"] == 342.0
+    # A parked car can still say how warm it is, without a broker.
+    assert body["live"]["inside_temp"] == 21.5
+    assert body["live"]["outside_temp"] == 9.0
+    assert body["live"]["is_climate_on"] is True
     # Naive UTC from the database must come back as an explicit UTC timestamp.
     assert body["live"]["updated_at"] == datetime(2026, 10, 23, 9, 32, 54, 129000, tzinfo=UTC).timestamp()
 

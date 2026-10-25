@@ -25,6 +25,16 @@ export function LiveCard({ summary }: { summary: Summary }) {
   const range = live.rated_battery_range_km ?? live.est_battery_range_km ?? null;
   const limit = live.charge_limit_soc ?? null;
 
+  // Same chain as the position card: a geofence name, else the fact that we do
+  // have a fix, else the truth. "Location unknown" over known coordinates reads
+  // as a bug.
+  const hasFix = live.latitude != null && live.longitude != null;
+  const where = live.geofence
+    ? t("hero.parked", { place: live.geofence })
+    : hasFix
+      ? t("pos.outside")
+      : t("hero.nowhere");
+
   return (
     <Card span="full" cols={5} className="hero" tone={heroTone(live.state)}>
       <div className="hero-in">
@@ -42,9 +52,7 @@ export function LiveCard({ summary }: { summary: Summary }) {
             <span>km</span>
             <em>{t("hero.range")}</em>
           </div>
-          <div className="hero-sub">
-            {live.geofence ? t("hero.parked", { place: live.geofence }) : t("hero.nowhere")}
-          </div>
+          <div className="hero-sub">{where}</div>
           {live.is_climate_on ? (
             <span className="pill" style={{ "--tone": "var(--blue)", height: 24, fontSize: 11 } as CSSProperties}>
               <Fan size={13} style={{ marginLeft: -2 }} />

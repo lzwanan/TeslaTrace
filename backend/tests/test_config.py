@@ -3,9 +3,18 @@ from __future__ import annotations
 from app.config import Settings
 
 
+def clean(**overrides) -> Settings:
+    """Settings that ignore the developer's own backend/.env.
+
+    A local run needs one of those; a test that reads it asserts whatever that
+    file happens to contain, and passes or fails by machine.
+    """
+    return Settings(_env_file=None, **overrides)
+
+
 def test_defaults_match_teslamate_compose_names(monkeypatch):
     monkeypatch.setenv("DATABASE_PASS", "s3cret")
-    settings = Settings()
+    settings = clean()
 
     assert settings.database_host == "database"
     assert settings.database_name == "teslamate"
@@ -22,7 +31,7 @@ def test_env_overrides(monkeypatch):
     monkeypatch.setenv("MQTT_PASSWORD", "pw")
     monkeypatch.setenv("LOG_LEVEL", "debug")
 
-    settings = Settings()
+    settings = clean()
 
     assert settings.database_host == "192.168.1.9"
     assert settings.database_port == 6543
@@ -36,7 +45,7 @@ def test_env_overrides(monkeypatch):
 
 
 def test_dsn_escapes_credentials():
-    settings = Settings(database_pass="p@ss/word:1")
+    settings = clean(database_pass="p@ss/word:1")
     dsn = settings.dsn
 
     assert "p%40ss%2Fword%3A1" in dsn
@@ -45,4 +54,4 @@ def test_dsn_escapes_credentials():
 
 
 def test_mqtt_kwargs_omit_credentials_when_anonymous():
-    assert Settings().mqtt_client_kwargs == {"hostname": "mosquitto", "port": 1883}
+    assert clean().mqtt_client_kwargs == {"hostname": "mosquitto", "port": 1883}

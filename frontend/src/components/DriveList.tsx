@@ -1,6 +1,6 @@
 /** One trip row, used by both the overview card and the drives page. */
 
-import { clock, dayLabel, durationParts, num } from "../lib/format";
+import { clock, dayLabel, durationParts, num, placeLabel } from "../lib/format";
 import { useI18n, type Translate } from "../lib/i18n";
 import type { Drive } from "../lib/types";
 import { Empty } from "./ui";
@@ -20,9 +20,9 @@ export function DriveList({ drives, emptyHint }: { drives: Drive[]; emptyHint?: 
           </div>
           <div className="drive-body">
             <div className="drive-name">
-              <span>{drive.from ?? t("pos.unknown")}</span>
+              <span>{placeLabel(drive.from, drive.from_lat, drive.from_lng, t("pos.unknown"))}</span>
               <span className="arrow">→</span>
-              <span>{drive.to ?? t("pos.unknown")}</span>
+              <span>{placeLabel(drive.to, drive.to_lat, drive.to_lng, t("pos.unknown"))}</span>
             </div>
             <div className="drive-meta">
               <span>

@@ -61,3 +61,23 @@ export function ageParts(seconds: number): AgePart {
 export function amapLink(lat: number, lng: number, name: string): string {
   return `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&coordinate=wgs84&callnative=1`;
 }
+
+/**
+ * A trip endpoint: the geocoder or geofence name when there is one, otherwise the
+ * coordinates. Nominatim is off by default in TeslaMate, so most rows have no
+ * name at all — printing "unknown place" for every one of them is a wall of
+ * nothing, while the position was stored all along.
+ *
+ * Three decimals (~110 m) instead of four: enough to recognise a place in a list,
+ * two characters shorter in a column that already truncates.
+ */
+export function placeLabel(
+  name: string | null | undefined,
+  lat?: number | null,
+  lng?: number | null,
+  empty: string = "",
+): string {
+  if (name) return name;
+  if (lat != null && lng != null) return `${num(lat, 3)}, ${num(lng, 3)}`;
+  return empty;
+}

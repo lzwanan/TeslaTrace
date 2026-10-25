@@ -95,6 +95,7 @@ const en = {
 
   "pos.open": "Open in maps",
   "pos.unknown": "Unknown place",
+  "pos.outside": "Not inside a saved place",
   "pos.coords": "{lat}, {lng}",
 
   "kpi.battery": "Battery",
@@ -287,6 +288,7 @@ const zh: Record<TKey, string> = {
 
   "pos.open": "在地图中打开",
   "pos.unknown": "未知位置",
+  "pos.outside": "不在已保存的地点内",
   "pos.coords": "{lat}, {lng}",
 
   "kpi.battery": "当前电量",
