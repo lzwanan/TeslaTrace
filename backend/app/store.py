@@ -22,6 +22,7 @@ from .timeutil import day_start, month_keys, month_start, months_back, to_naive_
 _SQL_DIR = Path(__file__).with_name("sql")
 
 FAR_FUTURE = datetime(2100, 1, 1)
+FAR_PAST = datetime(1970, 1, 1)
 EMPTY_STATS = {"today_drives": 0, "today_km": 0.0, "month_drives": 0, "month_km": 0.0}
 
 
@@ -51,15 +52,20 @@ class Store:
         return rows[0] if rows else dict(EMPTY_STATS)
 
     async def recent_drives(
-        self, car_id: int, limit: int = 20, before: datetime | None = None
+        self,
+        car_id: int,
+        limit: int = 20,
+        before: datetime | None = None,
+        since: datetime | None = None,
     ) -> list[dict[str, Any]]:
         return await self._all(
             "recent_drives",
             {
                 "car_id": car_id,
                 "limit": max(1, min(limit, 100)),
-                # A far-future bound keeps one query shape for the first page too.
+                # Far-future and far-past bounds keep one query shape for every page.
                 "before": to_naive_utc(before) if before else FAR_FUTURE,
+                "since": to_naive_utc(since) if since else FAR_PAST,
             },
         )
 

@@ -1,4 +1,6 @@
--- Keyset pagination: pass the last start_date you received as `before`.
+-- Keyset pagination: pass the last start_date you received as `before`, and the
+-- month lower bound as `since`. Both are always bound, so the month filter and the
+-- unfiltered list share one query shape and one plan.
 -- Place names come from the geocoder (addresses) and are frequently null when
 -- Nominatim is not configured, so a geofence name is the next best label.
 SELECT
@@ -19,5 +21,6 @@ LEFT JOIN geofences ef ON ef.id = d.end_geofence_id
 LEFT JOIN positions st ON st.id = d.start_position_id
 WHERE d.car_id = %(car_id)s
   AND d.start_date < %(before)s
+  AND d.start_date >= %(since)s
 ORDER BY d.start_date DESC
 LIMIT %(limit)s;

@@ -149,9 +149,11 @@ def router() -> APIRouter:
         car_id: int | None = None,
         limit: int = Query(default=20, ge=1, le=100),
         before: datetime | None = None,
+        # Lower bound for the month filter; None means "everything up to `before`".
+        since: datetime | None = None,
     ):
         car = await _pick_car(request, car_id)
-        rows = await _store(request).recent_drives(car["id"], limit=limit, before=before)
+        rows = await _store(request).recent_drives(car["id"], limit=limit, before=before, since=since)
         return {"car_id": car["id"], "drives": [_drive_row(d) for d in rows]}
 
     @api.get("/stats")
