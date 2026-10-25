@@ -120,6 +120,8 @@ export type Habits = {
   night_drives: number;
   short_drives: number;
   busiest_day_km: number | null;
+  /** Trip length buckets, 5 km / 15 / 30 / 60 and above. */
+  lengths: Distribution[];
 };
 
 export type Place = { name: string; visits: number };

@@ -3,61 +3,73 @@
 import { CalendarRange } from "lucide-react";
 
 import { Bars } from "../../components/Bars";
-import { Card, Cap } from "../../components/ui";
+import { Card, Cap, Empty, Stat } from "../../components/ui";
 import { num } from "../../lib/format";
 import { useI18n } from "../../lib/i18n";
 import type { Yearly } from "../../lib/types";
 
 export function Annual({ yearly }: { yearly: Yearly[] }) {
   const { t } = useI18n();
-  if (yearly.length === 0) return null;
+  const thisYear = new Date().getFullYear();
+
+  if (yearly.length === 0) {
+    return (
+      <Card span="full" cols={12}>
+        <Empty title={t("insight.noData")} />
+      </Card>
+    );
+  }
 
   const current = yearly[yearly.length - 1];
-  const previous = yearly.length > 1 ? yearly[yearly.length - 2] : null;
   // A year-to-date figure must never be compared against a full year: on the
   // reference car that reads "-45%" in October and means nothing.
-  const partial = current.year === new Date().getFullYear();
-  const delta =
-    !partial && previous && previous.km > 0
-      ? Math.round(((current.km - previous.km) / previous.km) * 100)
-      : null;
+  const partial = current.year === thisYear;
 
   return (
-    <Card span="full" cols={12} id="sec-year">
-      <Cap
-        icon={CalendarRange}
-        title={t("card.annual")}
-        aside={delta === null ? null : `${delta > 0 ? "+" : ""}${delta}%`}
-      />
+    <>
+      <Card span="half" cols={4} className="stat-card">
+        <Stat
+          label={t("insight.thisYear")}
+          value={num(current.km)}
+          unit="km"
+          note={
+            partial
+              ? `${t("stats.ytd")} · ${num(current.drives)} ${t("kpi.drives")}`
+              : `${num(current.drives)} ${t("kpi.drives")}`
+          }
+        />
+      </Card>
 
-      <Bars
-        data={yearly.map((year) => ({ label: String(year.year), value: year.km }))}
-        format={(value) => `${num(value)} km`}
-      />
+      <Card span="full" cols={8}>
+        <Cap icon={CalendarRange} title={t("card.annual")} />
+        <Bars
+          data={yearly.map((year) => ({ label: String(year.year), value: year.km }))}
+          format={(value) => num(value)}
+        />
+      </Card>
 
-      <div className="table" style={{ marginTop: 14 }}>
-        <div className="table-row head">
-          <span>{t("stats.year")}</span>
-          <span>{t("card.monthlyKm")}</span>
-          <span>{t("stats.kwh")}</span>
-          <span>{t("stats.cost")}</span>
-          <span>{t("stats.avgTrip")}</span>
-        </div>
-        {yearly.map((year) => (
-          <div className="table-row" key={year.year}>
-            <span className="num">
-              {year.year}
-              {year.year === new Date().getFullYear() ? (
-                <i className="ytd">{t("stats.ytd")}</i>
-              ) : null}
-            </span>
-            <span className="num">{num(year.km)} km</span>
-            <span className="num">{num(year.kwh)} kWh</span>
-            <span className="num">{year.cost === null ? "—" : `¥${num(year.cost)}`}</span>
-            <span className="num">{num(year.avg_km, 1)} km</span>
+      <Card span="full" cols={12}>
+        <Cap title={t("insight.breakdown")} />
+        <div className="table">
+          <div className="table-row head">
+            <span>{t("stats.year")}</span>
+            <span>{t("card.monthlyKm")}</span>
+            <span>{t("stats.kwh")}</span>
+            <span>{t("stats.cost")}</span>
           </div>
-        ))}
-      </div>
-    </Card>
+          {yearly.map((year) => (
+            <div className="table-row" key={year.year}>
+              <span className="num">
+                {year.year}
+                {year.year === thisYear ? <i className="ytd">{t("stats.ytd")}</i> : null}
+              </span>
+              <span className="num">{num(year.km)} km</span>
+              <span className="num">{num(year.kwh)} kWh</span>
+              <span className="num">{year.cost === null ? "—" : `¥${num(year.cost)}`}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </>
   );
 }

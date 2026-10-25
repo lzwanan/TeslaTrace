@@ -203,9 +203,14 @@ async def _live_payload(request: Request, car_id: int) -> dict[str, Any]:
     position = await _store(request).last_position(car_id)
     if position is None:
         return {}
+    state = await _store(request).current_state(car_id)
     return {
         "car_id": car_id,
         "source": "db",
+        # The pill reads "unknown" when this is missing, and "unknown" is the one
+        # thing a car that is simply unplugged is not.
+        "state": state.get("state") if state else None,
+        "since": as_utc(state["start_date"]).isoformat() if state else None,
         "battery_level": position.get("battery_level"),
         "est_battery_range_km": position.get("rated_battery_range_km"),
         "rated_battery_range_km": position.get("rated_battery_range_km"),

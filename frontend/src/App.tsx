@@ -25,7 +25,7 @@ import { forgetCachedData, markFromNetwork, useAppUpdate, useOffline } from "./l
 import { applyTheme, readTheme, saveTheme } from "./lib/theme";
 import type { Car } from "./lib/types";
 import { Drives } from "./pages/Drives";
-import { Insights } from "./pages/insights";
+import { Insights, SECTION_IDS, type InsightsSection } from "./pages/insights";
 import { Overview } from "./pages/Overview";
 import { Settings } from "./pages/Settings";
 
@@ -50,6 +50,7 @@ export function App() {
   const now = useNow();
 
   const [route, setRoute] = useState<Route>(readRoute);
+  const [section, setSection] = useState<InsightsSection>(readSection);
   const [theme, setTheme] = useState(readTheme);
   const [auth, setAuth] = useState<Session | null>(null);
   const [cars, setCars] = useState<Car[] | null>(null);
@@ -65,7 +66,10 @@ export function App() {
   const update = useAppUpdate();
 
   useEffect(() => {
-    const onHash = () => setRoute(readRoute());
+    const onHash = () => {
+      setRoute(readRoute());
+      setSection(readSection());
+    };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -90,7 +94,7 @@ export function App() {
   // list and coming back lands you in the middle of it.
   useEffect(() => {
     viewsRef.current?.scrollTo({ top: 0 });
-  }, [route, carId]);
+  }, [route, carId, section]);
 
   // One request decides whether a login is needed at all, before asking for data.
   useEffect(() => {
@@ -247,9 +251,9 @@ export function App() {
           <header className="topbar">
             <div className="title">
               <h1>{t(`nav.${route}`)}</h1>
-              <p>
-                {summary?.car.label ?? "TeslaTrace"} · {updated}
-              </p>
+              {/* The car name is in the switcher right next to this; repeating it here
+                  was costing the only width this line has on a phone. */}
+              <p>{updated}</p>
             </div>
             {chrome}
           </header>
@@ -313,7 +317,12 @@ export function App() {
                   ) : route === "drives" ? (
                     <Drives summary={summary} nonce={nonce} />
                   ) : (
-                    <Insights summary={summary} nonce={nonce} />
+                    <Insights
+                      summary={summary}
+                      nonce={nonce}
+                      section={section}
+                      onSection={(id) => goTo("insights", id)}
+                    />
                   )
                 ) : (
                   <LoadingGrid />
@@ -364,8 +373,8 @@ function UpdateToast({ onApply }: { onApply: () => void }) {
 }
 
 /** Hash navigation from a button: the router reads the hash, so this is the whole API. */
-function goTo(route: Route) {
-  window.location.hash = `#/${route}`;
+function goTo(route: Route, section?: string) {
+  window.location.hash = section ? `#/${route}/${section}` : `#/${route}`;
 }
 
 /** One tap cycles to the next car: cheaper than a dropdown on a phone. */
@@ -525,8 +534,14 @@ function LoadingGrid() {
 }
 
 function readRoute(): Route {
-  const value = window.location.hash.replace(/^#\/?/, "");
+  const [value] = window.location.hash.replace(/^#\/?/, "").split("/");
   return (ROUTES as string[]).includes(value) ? (value as Route) : "overview";
+}
+
+/** `#/insights/charging` — the topic is part of the address, so a reload keeps it. */
+function readSection(): InsightsSection {
+  const value = window.location.hash.replace(/^#\/?/, "").split("/")[1];
+  return (SECTION_IDS as readonly string[]).includes(value) ? (value as InsightsSection) : "month";
 }
 
 function readNotices(): string[] {

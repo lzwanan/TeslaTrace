@@ -73,6 +73,11 @@ class Store:
         rows = await self._all("last_position", {"car_id": car_id})
         return rows[0] if rows else None
 
+    async def current_state(self, car_id: int) -> dict[str, Any] | None:
+        """The state TeslaMate recorded last; the fallback when MQTT is out of reach."""
+        rows = await self._all("car_state", {"car_id": car_id})
+        return rows[0] if rows else None
+
     async def extras(self, car_id: int, tz) -> dict[str, Any]:
         """Yearly totals, charging habits, driving habits and frequent places.
 
@@ -106,7 +111,16 @@ class Store:
                     {"key": "evening", "value": charging["evening"]},
                 ],
             },
-            "habits": {k: habits[k] for k in habits},
+            "habits": {
+                **{k: habits[k] for k in habits if not k.startswith("km")},
+                "lengths": [
+                    {"key": "lt5", "value": habits["short_drives"]},
+                    {"key": "to15", "value": habits["km5_15"]},
+                    {"key": "to30", "value": habits["km15_30"]},
+                    {"key": "to60", "value": habits["km30_60"]},
+                    {"key": "over60", "value": habits["km60_plus"]},
+                ],
+            },
             "places": places,
         }
 

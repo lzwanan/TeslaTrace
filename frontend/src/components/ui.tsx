@@ -58,6 +58,49 @@ export function Cap({
   );
 }
 
+/**
+ * The section heading: a sentence about what the reader is looking at.
+ *
+ * The nav label above it is a noun ("Charging"); this is the sentence that says
+ * what the screen is for, so a tab does not land on a wall of unlabelled cards.
+ */
+export function SectionHead({ title, desc }: { title: string; desc?: string }) {
+  return (
+    <div className="sec-head">
+      <h2>{title}</h2>
+      {desc ? <p>{desc}</p> : null}
+    </div>
+  );
+}
+
+/** The one number a section is about. Everything else on the screen supports it. */
+export function Stat({
+  label,
+  value,
+  unit,
+  note,
+  size = "number",
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  note?: ReactNode;
+  /** `text` for a hero that is a name rather than a number. */
+  size?: "number" | "text";
+}) {
+  return (
+    <>
+      <div className="stat-label">{label}</div>
+      <div className={`stat-value${size === "text" ? " text" : ""}`}>
+        {value}
+        {unit ? <span>{unit}</span> : null}
+      </div>
+      {note ? <div className="stat-note">{note}</div> : null}
+    </>
+  );
+}
+
+
 export function Kpi({
   icon: Icon,
   label,

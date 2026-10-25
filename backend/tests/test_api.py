@@ -44,6 +44,9 @@ class FakeStore:
     async def driving_stats(self, car_id, tz, now=None):
         return {"today_drives": 2, "today_km": 42.6, "month_drives": 38, "month_km": 1284.0}
 
+    async def current_state(self, car_id):
+        return {"state": "offline", "start_date": START}
+
     async def recent_drives(self, car_id, limit=20, before=None, since=None):
         self.last_since = since
         return [
@@ -150,6 +153,10 @@ def test_live_falls_back_to_last_position_before_mqtt_arrives():
     assert body["live"]["inside_temp"] == 21.5
     assert body["live"]["outside_temp"] == 9.0
     assert body["live"]["is_climate_on"] is True
+    # "unknown" was the one thing a simply parked car was not: TeslaMate records
+    # every transition, so the pill can say offline and since when.
+    assert body["live"]["state"] == "offline"
+    assert body["live"]["since"] == "2026-10-23T09:32:54.129000+00:00"
     # Naive UTC from the database must come back as an explicit UTC timestamp.
     assert body["live"]["updated_at"] == datetime(2026, 10, 23, 9, 32, 54, 129000, tzinfo=UTC).timestamp()
 

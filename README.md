@@ -41,13 +41,15 @@ TeslaTrace is the other half:
 
 ## Features
 
-| Area     | Highlights                                                                                                                  |
-| -------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Live     | State pill (charging / driving / online / asleep *for 42 min*), SOC ring, range, charger power, time to full, live position |
-| Drives   | Trip list with route map, per-trip consumption and cost, replay (planned)                                                   |
-| Charging | Session list, SOC curve, cost with time-of-use tariffs, home vs Supercharger split                                          |
-| Insights | Daily / monthly consumption, battery health trend, vampire drain while parked, savings vs petrol                            |
-| Platform | Responsive from 390 px to 1440 px, installable PWA, dark and light themes                                                   |
+| Area     | Today                                                                                                                                     |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Live     | State pill (charging / driving / online / asleep *for 42 min*), SOC ring, range, charger power, time to full, live position               |
+| Drives   | Keyset-paginated list, month filter, both ends named or given as a coordinate                                                              |
+| Insights | Five topics, one screen each: distance and cost by month, year by year, charging habits, driving habits (with trip-length distribution), frequent places |
+| Access   | Open by default, or a username and password you turn on in Settings — one account, no user table                                          |
+| Platform | Responsive from 390 px to 1440 px, installable PWA with an offline shell, dark and light themes, Chinese and English                       |
+
+Next up: **trip detail** — route map, per-trip consumption and energy recovered. After that, charging cost with time-of-use tariffs and a home-versus-Supercharger split.
 
 Deliberately **not** included: raw current/voltage traces, per-sample GPS dumps, vehicle option flags. Those belong in Grafana.
 

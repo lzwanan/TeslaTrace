@@ -213,12 +213,19 @@ body {
 .title {
   min-width: 0;
 }
+.title {
+  flex: 1;
+  min-width: 0;
+}
 .title h1 {
   margin: 0;
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1.2;
+  /* A two-character page name wrapping onto two lines is how "统计" became a
+     vertical stack once the status pill got wider. */
+  white-space: nowrap;
 }
 .title p {
   margin: 3px 0 0;
@@ -282,7 +289,7 @@ body {
    In-page navigation: the sticky section bar on Insights and the month filter on
    Drives. Same chip, two containers — one sticks, one scrolls sideways.
    --------------------------------------------------------------------------- */
-.sectionnav {
+.seg {
   position: sticky;
   top: 0;
   z-index: 6;
@@ -296,7 +303,7 @@ body {
   background: var(--bg);
   scrollbar-width: none;
 }
-.sectionnav::-webkit-scrollbar {
+.seg::-webkit-scrollbar {
   display: none;
 }
 
@@ -418,9 +425,11 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: var(--t2);
-  font-size: 12px;
-  margin-bottom: 10px;
+  color: var(--t1);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  margin-bottom: 12px;
 }
 .cap svg {
   width: 15px;
@@ -1320,7 +1329,26 @@ body {
   display: flex;
   align-items: flex-end;
   gap: 6px;
-  height: 110px;
+  height: 132px;
+  border-bottom: 1px solid var(--line);
+}
+.bar-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+/* The number belongs to the bar, not to a legend nobody reads. */
+.bar-val {
+  margin-bottom: 5px;
+  font-size: 10.5px;
+  line-height: 1;
+  color: var(--t3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 @container app (min-width: 640px) {
   .bars {
@@ -1338,18 +1366,20 @@ body {
   width: 100%;
   max-width: 46px;
   margin: 0 auto;
-  border-radius: 6px 6px 3px 3px;
+  border-radius: 5px 5px 0 0;
   background: var(--line2);
   min-height: 3px;
   transition: height 0.4s ease;
 }
+/* Red is the attention colour. A month in progress is not an alarm. */
 .bar.current {
-  background: var(--red);
+  background: var(--blue);
+  opacity: 0.85;
 }
 .bars-labels {
   display: flex;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 7px;
 }
 .bars-labels span {
   flex: 1;
@@ -1367,10 +1397,10 @@ body {
 }
 .table-row {
   display: grid;
-  grid-template-columns: 0.7fr 1.2fr 1fr 0.9fr 0.9fr;
+  grid-template-columns: 0.8fr 1.2fr 1fr 1fr;
   gap: 8px;
-  padding: 7px 0;
-  font-size: 12px;
+  padding: 9px 0;
+  font-size: 12.5px;
   border-top: 1px solid var(--line);
 }
 .table-row:first-child {
@@ -1378,7 +1408,7 @@ body {
 }
 .table-row.head {
   color: var(--t3);
-  font-size: 10.5px;
+  font-size: 11.5px;
   padding-bottom: 4px;
 }
 .table-row span:not(:first-child) {
@@ -1423,19 +1453,19 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.dist .dbar {
+.dbar {
   flex: 1;
   height: 6px;
   border-radius: 3px;
   background: var(--track);
   overflow: hidden;
 }
-.dist .dbar i {
+.dbar i {
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: var(--red);
-  opacity: 0.85;
+  background: var(--blue);
+  opacity: 0.8;
 }
 .dist em {
   font-style: normal;
@@ -1444,4 +1474,122 @@ body {
   text-align: right;
   color: var(--t3);
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   Section header + the one number a section is about
+   --------------------------------------------------------------------------- */
+.sec-head {
+  margin: 2px 0 14px;
+}
+.sec-head h2 {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--t1);
+}
+.sec-head p {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--t3);
+  max-width: 62ch;
+}
+@container app (min-width: 1024px) {
+  .sec-head h2 {
+    font-size: 20px;
+  }
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--t3);
+}
+.stat-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  font-variant-numeric: tabular-nums;
+}
+.stat-value span {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--t2);
+  white-space: nowrap;
+}
+.stat-card {
+  display: flex;
+  flex-direction: column;
+}
+/* Anchored to the bottom of the card: the row is as tall as its tallest card, and
+   a caption floating in the middle of that space reads as a mistake. */
+.stat-note {
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--t3);
+}
+.stat-value.text {
+  font-size: 26px;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+/* Places: the name wraps. "华为练秋湖研发…" is not a place anyone recognises. */
+.places {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.places li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.places li:first-child {
+  border-top: 0;
+}
+.pl-name {
+  flex: 0 0 42%;
+  color: var(--t2);
+  line-height: 1.4;
+}
+.places em {
+  flex: none;
+  min-width: 42px;
+  text-align: right;
+  font-style: normal;
+  color: var(--t3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A phone has room for the title and three buttons. The pill's job — saying how
+   stale the numbers are — is already done by the line under the title. */
+@container app (max-width: 560px) {
+  .topbar .pill {
+    display: none;
+  }
+}
+
+/* Four tiles need two rows on a phone; squeezing them into one clips the number. */
+.tiles-4 {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@container app (min-width: 640px) {
+  .tiles-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }

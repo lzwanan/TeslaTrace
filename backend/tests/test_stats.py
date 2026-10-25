@@ -105,7 +105,8 @@ async def test_extras_assembles_the_four_blocks(monkeypatch):
         if name == "habits":
             return [{"drives": 3589, "avg_kmh": 46.0, "avg_minutes": 22, "avg_km": 16.8,
                      "longest_km": 358.3, "days_used": 848, "night_drives": 371,
-                     "short_drives": 1498, "busiest_day_km": 1322.1}]
+                     "short_drives": 1498, "km5_15": 1102, "km15_30": 608,
+                     "km30_60": 281, "km60_plus": 100, "busiest_day_km": 1322.1}]
         return [{"name": "湖景花园", "visits": 407}]
 
     monkeypatch.setattr(store, "_all", fake_all)
@@ -117,4 +118,11 @@ async def test_extras_assembles_the_four_blocks(monkeypatch):
     assert [item["key"] for item in data["charging"]["hours"]] == ["night", "day", "evening"]
     assert data["charging"]["levels"][0]["value"] == 373
     assert data["habits"]["short_drives"] == 1498
+    # The buckets are exposed as a distribution, and the raw columns stay out of
+    # the payload so the UI has one shape to render.
+    assert [item["key"] for item in data["habits"]["lengths"]] == [
+        "lt5", "to15", "to30", "to60", "over60"
+    ]
+    assert data["habits"]["lengths"][0]["value"] == 1498
+    assert "km5_15" not in data["habits"]
     assert data["places"][0] == {"name": "湖景花园", "visits": 407}

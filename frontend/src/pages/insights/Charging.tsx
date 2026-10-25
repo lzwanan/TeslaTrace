@@ -1,69 +1,62 @@
-/** What the pack is charged to, and when the cable goes in. */
+/** How full the pack is charged to, and when the cable goes in. */
 
-import { PlugZap } from "lucide-react";
+import { Clock, PlugZap, Zap } from "lucide-react";
 
-import { Card, Cap, Tile } from "../../components/ui";
+import { Dist } from "../../components/Dist";
+import { Card, Cap, Empty, Stat, Tile } from "../../components/ui";
 import { num } from "../../lib/format";
 import { useI18n } from "../../lib/i18n";
-import type { ChargingProfile, Distribution } from "../../lib/types";
+import type { ChargingProfile } from "../../lib/types";
 
 export function Charging({ profile }: { profile: ChargingProfile }) {
   const { t } = useI18n();
-  if (profile.sessions === 0) return null;
+
+  if (profile.sessions === 0) {
+    return (
+      <Card span="full" cols={12}>
+        <Empty title={t("insight.noData")} />
+      </Card>
+    );
+  }
 
   return (
-    <Card span="half" cols={4} id="sec-charging">
-      <Cap icon={PlugZap} title={t("card.chargingHabits")} aside={t("stats.sessions", { n: profile.sessions })} />
+    <>
+      <Card span="half" cols={4} className="stat-card">
+        <Stat
+          label={t("stats.avgPower")}
+          value={num(profile.avg_kw, 1)}
+          unit="kW"
+          note={`${t("stats.sessions", { n: profile.sessions })} · ${num(profile.avg_minutes)} ${t(
+            "kpi.minutes",
+          )}`}
+        />
+      </Card>
 
-      <Dist
-        title={t("stats.chargedTo")}
-        items={profile.levels}
-        labelOf={(key) => t(`stats.level.${key}` as "stats.level.full")}
-      />
-      <Dist
-        title={t("stats.startedAt")}
-        items={profile.hours}
-        labelOf={(key) => t(`stats.hour.${key}` as "stats.hour.night")}
-      />
+      <Card span="full" cols={8}>
+        <Cap icon={PlugZap} title={t("stats.chargedTo")} />
+        <Dist items={profile.levels} labelOf={(key) => t(`stats.level.${key}` as "stats.level.full")} />
+        <div className="note">{t("stats.lfpNote")}</div>
+      </Card>
 
-      <div className="tiles-3" style={{ marginTop: 12 }}>
-        <Tile label={t("stats.avgPower")} value={num(profile.avg_kw, 1)} unit="kW" />
-        <Tile label={t("stats.avgDuration")} value={num(profile.avg_minutes)} unit={t("kpi.minutes")} />
-        <Tile label={t("stats.maxKwh")} value={num(profile.max_kwh, 1)} unit="kWh" />
-      </div>
+      <Card span="half" cols={6}>
+        <Cap icon={Clock} title={t("stats.startedAt")} />
+        <Dist items={profile.hours} labelOf={(key) => t(`stats.hour.${key}` as "stats.hour.night")} />
+      </Card>
 
-      <div className="note">{t("stats.lfpNote")}</div>
-    </Card>
-  );
-}
-
-/** A tiny horizontal bar list — reused for any {key, value} distribution. */
-export function Dist({
-  title,
-  items,
-  labelOf,
-}: {
-  title: string;
-  items: Distribution[];
-  labelOf: (key: string) => string;
-}) {
-  const max = Math.max(1, ...items.map((item) => item.value));
-  const total = items.reduce((sum, item) => sum + item.value, 0) || 1;
-
-  return (
-    <div style={{ marginTop: 12 }}>
-      <div className="dist-title">{title}</div>
-      <ul className="dist">
-        {items.map((item) => (
-          <li key={item.key}>
-            <span className="label">{labelOf(item.key)}</span>
-            <span className="dbar">
-              <i style={{ width: `${Math.round((item.value / max) * 100)}%` }} />
-            </span>
-            <em>{Math.round((item.value / total) * 100)}%</em>
-          </li>
-        ))}
-      </ul>
-    </div>
+      <Card span="half" cols={6}>
+        <Cap icon={Zap} title={t("insight.perSession")} />
+        <div
+          className="tiles-3"
+          style={{ marginTop: 2, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
+        >
+          <Tile
+            label={t("stats.avgDuration")}
+            value={num(profile.avg_minutes)}
+            unit={t("kpi.minutes")}
+          />
+          <Tile label={t("stats.maxKwh")} value={num(profile.max_kwh, 1)} unit="kWh" />
+        </div>
+      </Card>
+    </>
   );
 }
