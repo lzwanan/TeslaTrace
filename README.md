@@ -125,6 +125,16 @@ Nothing to configure up front. The dashboard starts open and says so on screen, 
 - Switching protection off deletes the file and reopens the dashboard.
 - Forgot the password? Delete `data/auth.json` and reload. That is also, deliberately, what anyone with shell access can do.
 
+### On a phone, and without a network
+
+Open the dashboard in Safari or Chrome and use **Add to Home Screen**. It launches full screen, with its own icon, and no address bar — which is the whole point: checking the car should be one tap, not a bookmark and a pinch-zoom.
+
+The service worker caches the app and the last snapshot of your car, so a dead NAS, a reboot in progress, or a garage with no signal gives you the last numbers it knew, greyed to say so, instead of a white screen. When the connection returns the page refreshes itself; you do not have to reopen it.
+
+A new build is never swapped in under your finger. When one is ready, a **Reload** button appears and stays there until you tap it.
+
+There is nothing to configure for any of this. `sw.js` is generated at build time — its cache name is a hash of the asset list, so a deploy invalidates exactly the right files and never leaves an old bundle behind.
+
 ## API
 
 ```
@@ -149,8 +159,9 @@ GET    /api/v1/stream          SSE: one snapshot, then a frame per change
 | P1    | FastAPI: read-only DB, MQTT → SSE, `/api/v1/summary`, `/drives`, healthcheck | ✅ done      |
 | P2    | React app: overview, drives, card registry, zh/en, dark and light            | ✅ done      |
 | P3    | Insights: monthly distance and cost, battery capacity from charge sessions   | ✅ done      |
-| P4    | Login: account file, session cookie, throttling, CSP. PWA, image, docs       | 🚧 in progress |
-| P5    | Trip replay, multi-car                                                       | ⬜           |
+| P4    | Login: account file, session cookie, throttling, CSP. PWA, offline shell     | ✅ done       |
+| P5    | Published image on ghcr.io, Synology walkthrough, trip detail, YoY card      | 🚧 next       |
+| P6    | Trip replay, multi-car                                                       | ⬜            |
 
 
 ## Development

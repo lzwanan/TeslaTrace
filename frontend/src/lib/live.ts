@@ -13,6 +13,44 @@ import type { LiveState, Summary } from "./types";
 
 export type StreamStatus = "connecting" | "live" | "reconnecting";
 
+const KEY = "teslatrace.summary";
+
+/**
+ * The last snapshot, kept on the device.
+ *
+ * The dashboard's content arrives over SSE, and a stream is deliberately never
+ * cached by the service worker: replaying a connection is not the same thing as
+ * replaying a document. Without this, an offline launch would draw the shell and
+ * then have nothing to put in it.
+ *
+ * It also buys the online case: the overview paints on the first frame instead
+ * of after the handshake.
+ */
+function readSnapshot(carId: number): Summary | null {
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? "null") as {
+      car_id: number;
+      summary: Summary;
+    } | null;
+    return saved?.car_id === carId ? saved.summary : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSnapshot(carId: number, summary: Summary) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify({ car_id: carId, summary }));
+  } catch {
+    // A full quota costs a cold start offline, nothing more.
+  }
+}
+
+/** Signing out should leave no car on the device, cache or not. */
+export function clearSnapshot() {
+  localStorage.removeItem(KEY);
+}
+
 /**
  * `nonce` is the manual refresh: bumping it drops the stream and opens a new one,
  * which re-sends the full snapshot. No polling, no second code path.
@@ -29,12 +67,17 @@ export function useSummaryStream(carId: number | undefined, nonce = 0) {
       setStatus("connecting");
       return;
     }
+    // Switching cars must not keep the other car's numbers on screen while the
+    // new stream is still connecting.
+    setSummary(readSnapshot(carId));
     setStatus("connecting");
     const source = new EventSource(streamUrl(carId));
 
     const onSnapshot = (event: MessageEvent<string>) => {
-      setSummary(JSON.parse(event.data) as Summary);
+      const snapshot = JSON.parse(event.data) as Summary;
+      setSummary(snapshot);
       setStatus("live");
+      writeSnapshot(carId, snapshot);
     };
 
     const onPatch = (event: MessageEvent<string>) => {

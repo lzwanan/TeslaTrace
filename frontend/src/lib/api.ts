@@ -6,6 +6,8 @@
  * lives in JavaScript or in a URL.
  */
 
+import { CACHE_HEADER, markFromCache, markFromNetwork } from "./pwa";
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -33,6 +35,13 @@ export type AuthChange = {
 
 async function call(path: string, init: RequestInit = {}): Promise<Response> {
   const response = await fetch(`/api/v1${path}`, { credentials: "same-origin", ...init });
+
+  // The service worker marks anything it answered from disk. The page needs to
+  // know, because "the numbers you are looking at are old" is information, not
+  // an implementation detail.
+  if (response.headers.get(CACHE_HEADER) === "hit") markFromCache();
+  else markFromNetwork();
+
   if (!response.ok) {
     throw new ApiError(response.status, await response.text().catch(() => response.statusText));
   }

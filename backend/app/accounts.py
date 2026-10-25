@@ -72,6 +72,7 @@ class Accounts:
     def __init__(self, path: Path | None = None) -> None:
         self._path = path
         self._account = self._read()
+        self._stamp = self._stamp_now()
         self._last_error: str | None = None
 
     @property
@@ -82,7 +83,26 @@ class Accounts:
     def last_error(self) -> str | None:
         return self._last_error
 
+    def _stamp_now(self) -> int | None:
+        try:
+            return self._path.stat().st_mtime_ns if self._path else None
+        except OSError:
+            return None
+
     def current(self) -> Account | None:
+        """The file is the source of truth, not this object.
+
+        Deleting ``auth.json`` is the documented way out of a forgotten password,
+        and it has to work without a restart. One ``stat`` per request is a
+        rounding error next to the database query that follows it, and the file
+        is only re-read when it actually changed.
+        """
+        if self._path is None:
+            return self._account
+        stamp = self._stamp_now()
+        if stamp != self._stamp:
+            self._stamp = stamp
+            self._account = self._read()
         return self._account
 
     def _read(self) -> Account | None:
@@ -124,9 +144,12 @@ class Accounts:
         except OSError as error:
             self._last_error = str(error)
             raise RuntimeError(f"cannot write {self._path}: {error}") from error
+        finally:
+            # We just wrote it; do not re-read our own work on the next request.
+            self._stamp = self._stamp_now()
 
     def verify(self, username: str, password: str) -> bool:
-        account = self._account
+        account = self.current()
         if account is None:
             return False
         # Compare the username first so a wrong name does not pay for a hash.
@@ -136,7 +159,7 @@ class Accounts:
 
     def confirm(self, password: str) -> bool:
         """Re-authentication for a settings change on an unlocked laptop."""
-        account = self._account
+        account = self.current()
         return bool(account) and verify_password(account.password_hash, password)
 
     def enable(self, username: str, password: str) -> Account:

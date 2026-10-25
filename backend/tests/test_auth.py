@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import mimetypes
 from pathlib import Path
 
 import pytest
@@ -52,6 +53,20 @@ def test_enable_writes_the_file_and_survives_a_reload(account_file: Path):
     assert reloaded.verify("liu", "hunter2")
     assert not reloaded.verify("liu", "hunter3")
     assert not reloaded.verify("admin", "hunter2")
+
+
+def test_deleting_the_file_reopens_the_dashboard_without_a_restart(account_file: Path):
+    """The documented way out of a forgotten password, and it has to be immediate:
+
+    a process that caches the account until the next restart would leave someone
+    locked out of their own car with the file already gone."""
+    accounts = Accounts(account_file)
+    accounts.enable("admin", "admin")
+    assert accounts.current() is not None
+
+    account_file.unlink()
+    assert accounts.current() is None
+    assert not accounts.verify("admin", "admin")
 
 
 def test_the_shipped_default_is_flagged(account_file: Path):
@@ -283,3 +298,16 @@ def test_docs_are_exempt_from_the_policy():
         response = client.get("/api/docs")
 
     assert "content-security-policy" not in response.headers
+
+
+def test_the_shell_is_revalidated_not_cached():
+    """An index.html the browser may reuse for days is a dashboard stuck on an old
+    build, with nothing on screen to say so."""
+    with make_client() as client:
+        assert client.get("/").headers["cache-control"] == "no-cache"
+
+
+def test_the_manifest_gets_a_real_media_type():
+    """Python's table does not know .webmanifest. Served as text/plain, browsers
+    ignore the file and the app cannot be installed."""
+    assert mimetypes.guess_type("app.webmanifest")[0] == "application/manifest+json"

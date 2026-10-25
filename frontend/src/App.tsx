@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowDownToLine,
   Gauge,
   LogOut,
   Moon,
@@ -10,6 +11,7 @@ import {
   SlidersHorizontal,
   Sun,
   TrendingUp,
+  WifiOff,
   X,
 } from "lucide-react";
 
@@ -18,7 +20,8 @@ import { Card, Skeleton } from "./components/ui";
 import { apiGet, ApiError, session, type Session } from "./lib/api";
 import { ageSeconds } from "./lib/format";
 import { useI18n } from "./lib/i18n";
-import { useNow, useSummaryStream } from "./lib/live";
+import { clearSnapshot, useNow, useSummaryStream } from "./lib/live";
+import { forgetCachedData, markFromNetwork, useAppUpdate, useOffline } from "./lib/pwa";
 import { applyTheme, readTheme, saveTheme } from "./lib/theme";
 import type { Car } from "./lib/types";
 import { Drives } from "./pages/Drives";
@@ -58,6 +61,8 @@ export function App() {
   const [hidden, setHidden] = useState<string[]>(readNotices);
 
   const viewsRef = useRef<HTMLDivElement>(null);
+  const offline = useOffline();
+  const update = useAppUpdate();
 
   useEffect(() => {
     const onHash = () => setRoute(readRoute());
@@ -69,6 +74,17 @@ export function App() {
     applyTheme(theme);
     saveTheme(theme);
   }, [theme]);
+
+  // Coming back from offline should not require pulling to refresh: the data
+  // on screen was, by definition, out of date when the network left.
+  useEffect(() => {
+    const onOnline = () => {
+      setAttempt((value) => value + 1);
+      setNonce((value) => value + 1);
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, []);
 
   // Each tab would otherwise keep the previous tab's scroll offset: leaving a long
   // list and coming back lands you in the middle of it.
@@ -108,6 +124,13 @@ export function App() {
 
   const { summary, status } = useSummaryStream(carId, nonce);
 
+  // A live stream is proof that what is on screen is current, and it is the only
+  // thing that recovers by itself when the server comes back: nothing else asks
+  // the API again without someone pressing something.
+  useEffect(() => {
+    if (status === "live") markFromNetwork();
+  }, [status]);
+
   const updated = useMemo(() => {
     if (!summary?.live.updated_at) return t("ui.offline");
     const age = ageSeconds(summary.live.updated_at, now);
@@ -117,6 +140,8 @@ export function App() {
   const signOut = async () => {
     try {
       await session.close();
+      forgetCachedData();
+      clearSnapshot();
     } finally {
       setCars(null);
       setCarId(undefined);
@@ -243,6 +268,13 @@ export function App() {
               </div>
             ) : (
               <>
+                {offline ? (
+                  <div className="offline-bar" role="status">
+                    <WifiOff size={14} strokeWidth={1.9} />
+                    <span>{t("ui.offlineBar")}</span>
+                  </div>
+                ) : null}
+
                 {auth && !auth.required && route !== "settings" && !hidden.includes(NOTICE.open) ? (
                   <Notice
                     icon={ShieldPlus}
@@ -307,7 +339,26 @@ export function App() {
             })}
           </nav>
         </main>
+
+        {update.ready ? <UpdateToast onApply={update.apply} /> : null}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Shown when a new build is installed and waiting. It never reloads on its own:
+ * the page is being read, possibly mid-scroll, on a phone.
+ */
+function UpdateToast({ onApply }: { onApply: () => void }) {
+  const { t } = useI18n();
+  return (
+    <div className="update-toast" role="status">
+      <ArrowDownToLine size={15} strokeWidth={1.9} />
+      <span>{t("ui.updateReady")}</span>
+      <button className="btn primary" type="button" onClick={onApply}>
+        {t("ui.updateApply")}
+      </button>
     </div>
   );
 }

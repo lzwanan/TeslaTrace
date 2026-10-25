@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import mimetypes
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -51,6 +52,16 @@ SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
 }
+
+# Python's table does not know this one, and a manifest served as text/plain is
+# ignored by every browser.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+
+# Hashed by Vite, so the names change when the bytes do.
+IMMUTABLE = ("/assets/",)
+# Both point at whatever the current build is. Letting a browser keep either one
+# is how an installed app ends up on last week's version.
+REVALIDATE = ("/", "/index.html", "/sw.js", "/manifest.webmanifest")
 
 
 def configure_logging(level: str) -> None:
@@ -144,6 +155,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             response.headers.setdefault(name, value)
         if not request.url.path.startswith(CSP_EXEMPT):
             response.headers.setdefault("Content-Security-Policy", CSP)
+        return response
+
+    @app.middleware("http")
+    async def cache_policy(request: Request, call_next):
+        """Without this the browser guesses, and its guess is generous.
+
+        An index.html served with only an ETag can be reused for days by
+        heuristic caching, which is invisible until someone is stuck on an old
+        build and has no way to tell.
+        """
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith(IMMUTABLE):
+            response.headers["cache-control"] = "public, max-age=31536000, immutable"
+        elif path in REVALIDATE:
+            response.headers["cache-control"] = "no-cache"
         return response
 
     app.include_router(health_router())
