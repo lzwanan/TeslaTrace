@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Gauge, LogOut, Moon, RefreshCw, Route, ShieldPlus, Sun, TrendingUp, X } from "lucide-react";
+import {
+  Gauge,
+  LogOut,
+  Moon,
+  RefreshCw,
+  Route,
+  ShieldAlert,
+  ShieldPlus,
+  SlidersHorizontal,
+  Sun,
+  TrendingUp,
+  X,
+} from "lucide-react";
 
 import { StatePill, humanAge } from "./components/StatePill";
 import { Card, Skeleton } from "./components/ui";
@@ -12,14 +24,23 @@ import type { Car } from "./lib/types";
 import { Drives } from "./pages/Drives";
 import { Insights } from "./pages/insights";
 import { Overview } from "./pages/Overview";
+import { Settings } from "./pages/Settings";
 
-type Route = "overview" | "drives" | "insights";
-const ROUTES: Route[] = ["overview", "drives", "insights"];
+type Route = "overview" | "drives" | "insights" | "settings";
+const ROUTES: Route[] = ["overview", "drives", "insights", "settings"];
 
-const ROUTE_ICON = { overview: Gauge, drives: Route, insights: TrendingUp } as const;
+const ROUTE_ICON = {
+  overview: Gauge,
+  drives: Route,
+  insights: TrendingUp,
+  settings: SlidersHorizontal,
+} as const;
 
-/** Set once the "no token configured" warning has been read and dismissed. */
-const NOTICE_KEY = "teslatrace.open-notice";
+/** Dismissed banners, one key each so hiding one does not hide the other. */
+const NOTICE = {
+  open: "teslatrace.notice.open",
+  defaultPassword: "teslatrace.notice.default-password",
+} as const;
 
 export function App() {
   const { t, lang, setLang } = useI18n();
@@ -34,7 +55,7 @@ export function App() {
   const [attempt, setAttempt] = useState(0);
   /** Bumped by the refresh button so views refetch instead of waiting for a reload. */
   const [nonce, setNonce] = useState(0);
-  const [notice, setNotice] = useState(() => localStorage.getItem(NOTICE_KEY) !== "1");
+  const [hidden, setHidden] = useState<string[]>(readNotices);
 
   const viewsRef = useRef<HTMLDivElement>(null);
 
@@ -75,7 +96,7 @@ export function App() {
         if (!alive) return;
         // A cookie that expired mid-session is a login prompt, not an error page.
         if (error instanceof ApiError && error.status === 401) {
-          setAuth({ required: true, authenticated: false });
+          setAuth({ required: true, authenticated: false, username: null, default_password: false });
           return;
         }
         setFailure(error instanceof ApiError ? error.status : 0);
@@ -100,13 +121,13 @@ export function App() {
       setCars(null);
       setCarId(undefined);
       setFailure(null);
-      setAuth({ required: true, authenticated: false });
+      setAuth({ required: true, authenticated: false, username: null, default_password: false });
     }
   };
 
-  const dismissNotice = () => {
-    localStorage.setItem(NOTICE_KEY, "1");
-    setNotice(false);
+  const dismiss = (key: string) => {
+    localStorage.setItem(key, "1");
+    setHidden((current) => [...current, key]);
   };
 
   const chrome = (
@@ -150,7 +171,7 @@ export function App() {
   );
 
   if (auth !== null && auth.required && !auth.authenticated) {
-    return <TokenGate chrome={chrome} onSubmit={() => setAttempt((value) => value + 1)} />;
+    return <LoginGate chrome={chrome} onSubmit={() => setAttempt((value) => value + 1)} />;
   }
 
   return (
@@ -222,8 +243,39 @@ export function App() {
               </div>
             ) : (
               <>
-                {auth && !auth.required && notice ? <OpenNotice onDismiss={dismissNotice} /> : null}
-                {summary ? (
+                {auth && !auth.required && route !== "settings" && !hidden.includes(NOTICE.open) ? (
+                  <Notice
+                    icon={ShieldPlus}
+                    title={t("ui.openTitle")}
+                    body={t("ui.openBody")}
+                    action={t("ui.setUp")}
+                    onAction={() => goTo("settings")}
+                    onDismiss={() => dismiss(NOTICE.open)}
+                    dismissLabel={t("ui.dismiss")}
+                  />
+                ) : null}
+
+                {auth?.default_password &&
+                route !== "settings" &&
+                !hidden.includes(NOTICE.defaultPassword) ? (
+                  <Notice
+                    icon={ShieldAlert}
+                    title={t("ui.defaultPasswordTitle")}
+                    body={t("ui.defaultPasswordBody")}
+                    action={t("ui.setUp")}
+                    onAction={() => goTo("settings")}
+                    onDismiss={() => dismiss(NOTICE.defaultPassword)}
+                    dismissLabel={t("ui.dismiss")}
+                  />
+                ) : null}
+
+                {route === "settings" ? (
+                  auth ? (
+                    <Settings auth={auth} onChange={setAuth} />
+                  ) : (
+                    <LoadingGrid />
+                  )
+                ) : summary ? (
                   route === "overview" ? (
                     <Overview summary={summary} />
                   ) : route === "drives" ? (
@@ -260,6 +312,11 @@ export function App() {
   );
 }
 
+/** Hash navigation from a button: the router reads the hash, so this is the whole API. */
+function goTo(route: Route) {
+  window.location.hash = `#/${route}`;
+}
+
 /** One tap cycles to the next car: cheaper than a dropdown on a phone. */
 function CarCycle({
   cars,
@@ -287,31 +344,47 @@ function CarCycle({
 }
 
 /**
- * Only shown while the dashboard runs without AUTH_TOKEN.
- *
- * The default is deliberately "open": a first run should show something, not a
- * login box. But a page that shows where the car is parked has to say out loud
- * that the neighbours can see it too.
+ * The two states worth interrupting for: nobody can be locked out, or everybody
+ * can walk in with the password that is printed in the README.
  */
-function OpenNotice({ onDismiss }: { onDismiss: () => void }) {
-  const { t } = useI18n();
+function Notice({
+  icon: Icon,
+  title,
+  body,
+  action,
+  onAction,
+  onDismiss,
+  dismissLabel,
+}: {
+  icon: typeof ShieldPlus;
+  title: string;
+  body: string;
+  action: string;
+  onAction: () => void;
+  onDismiss: () => void;
+  dismissLabel: string;
+}) {
   return (
     <div className="notice" role="status">
-      <ShieldPlus size={16} strokeWidth={1.8} />
+      <Icon size={16} strokeWidth={1.8} />
       <div>
-        <b>{t("ui.openTitle")}</b>
-        <span>{t("ui.openBody")}</span>
+        <b>{title}</b>
+        <span>{body}</span>
+        <button className="notice-action" type="button" onClick={onAction}>
+          {action} ›
+        </button>
       </div>
-      <button className="notice-x" type="button" aria-label={t("ui.dismiss")} onClick={onDismiss}>
+      <button className="notice-x" type="button" aria-label={dismissLabel} onClick={onDismiss}>
         <X size={14} />
       </button>
     </div>
   );
 }
 
-function TokenGate({ chrome, onSubmit }: { chrome: React.ReactNode; onSubmit: () => void }) {
+function LoginGate({ chrome, onSubmit }: { chrome: React.ReactNode; onSubmit: () => void }) {
   const { t } = useI18n();
-  const [value, setValue] = useState("");
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -320,7 +393,7 @@ function TokenGate({ chrome, onSubmit }: { chrome: React.ReactNode; onSubmit: ()
     setBusy(true);
     setError(null);
     try {
-      await session.open(value.trim());
+      await session.open(username.trim(), password);
       onSubmit();
     } catch (failure) {
       const status = failure instanceof ApiError ? failure.status : 0;
@@ -349,14 +422,23 @@ function TokenGate({ chrome, onSubmit }: { chrome: React.ReactNode; onSubmit: ()
                 <form onSubmit={submit}>
                   <input
                     className="field"
+                    value={username}
+                    autoComplete="username"
+                    aria-label={t("settings.username")}
+                    placeholder={t("settings.username")}
+                    onChange={(event) => setUsername(event.target.value)}
+                  />
+                  <input
+                    className="field"
                     type="password"
                     autoFocus
                     autoComplete="current-password"
-                    value={value}
-                    onChange={(event) => setValue(event.target.value)}
-                    placeholder="AUTH_TOKEN"
+                    value={password}
+                    aria-label={t("settings.password")}
+                    placeholder={t("settings.password")}
+                    onChange={(event) => setPassword(event.target.value)}
                   />
-                  <button className="btn primary" type="submit" disabled={!value.trim() || busy}>
+                  <button className="btn primary" type="submit" disabled={!password || busy}>
                     {busy ? t("ui.authChecking") : t("ui.authSave")}
                   </button>
                 </form>
@@ -394,4 +476,8 @@ function LoadingGrid() {
 function readRoute(): Route {
   const value = window.location.hash.replace(/^#\/?/, "");
   return (ROUTES as string[]).includes(value) ? (value as Route) : "overview";
+}
+
+function readNotices(): string[] {
+  return Object.values(NOTICE).filter((key) => localStorage.getItem(key) === "1");
 }

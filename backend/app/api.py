@@ -8,7 +8,6 @@ feel worse than one slightly slower one.
 from __future__ import annotations
 
 import logging
-import secrets
 from datetime import UTC, datetime
 from typing import Any
 
@@ -19,6 +18,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from . import auth
+from .accounts import Account, Accounts
 from .events import Hub
 from .live import LiveRegistry
 from .store import Store
@@ -53,6 +53,10 @@ def _throttle(request: Request) -> auth.Throttle:
     return throttle
 
 
+def _accounts(request: Request) -> Accounts:
+    return request.app.state.accounts
+
+
 def _client(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
@@ -63,29 +67,55 @@ def _is_https(request: Request) -> bool:
     return forwarded == "https" or request.url.scheme == "https"
 
 
-def _authenticated(request: Request, secret: str) -> bool:
-    header = request.headers.get("authorization", "")
-    if header.lower().startswith("bearer ") and secrets.compare_digest(header[7:], secret):
-        return True
-    return auth.verify(secret, request.cookies.get(auth.COOKIE, ""))
+def _signed_in(request: Request, account: Account) -> bool:
+    return auth.verify(account.signing_secret, request.cookies.get(auth.COOKIE, ""))
 
 
-async def require_token(request: Request) -> None:
-    """Cookie first, bearer second.
+def _state(request: Request, *, signed_in: bool | None = None) -> dict[str, Any]:
+    """What the page needs to know about the door, in one shape.
 
-    The token used to be accepted as `?token=` for the sake of `EventSource`, which
-    cannot set headers. It is gone: the stream is same-origin, so the cookie travels
-    with it, and the token stops appearing in access logs and browser history.
+    `signed_in` is passed when the response has just issued a cookie, so the answer
+    describes the new session rather than the one in the request.
     """
-    secret = _settings(request).auth_token
-    if not secret:
+    account = _accounts(request).current()
+    if account is None:
+        return {
+            "required": False,
+            "authenticated": True,
+            "username": None,
+            "default_password": False,
+        }
+    return {
+        "required": True,
+        "authenticated": _signed_in(request, account) if signed_in is None else signed_in,
+        "username": account.username,
+        "default_password": account.default_password,
+    }
+
+
+async def require_login(request: Request) -> None:
+    """No account on disk means the dashboard is open, and that is allowed.
+
+    Everything is authenticated by the session cookie. There is no query-string
+    variant: a secret that travels in a URL ends up in access logs and history.
+    """
+    account = _accounts(request).current()
+    if account is None:
         return
-    if not _authenticated(request, secret):
-        raise HTTPException(status_code=401, detail="authentication required")
+    if not _signed_in(request, account):
+        raise HTTPException(status_code=401, detail="login required")
 
 
 class Credentials(BaseModel):
-    token: str
+    username: str
+    password: str
+
+
+class AuthSettings(BaseModel):
+    enabled: bool
+    username: str | None = None
+    new_password: str | None = None
+    current_password: str | None = None
 
 
 def session_router() -> APIRouter:
@@ -95,17 +125,14 @@ def session_router() -> APIRouter:
 
     @router_.get("/session")
     async def read_session(request: Request):
-        secret = _settings(request).auth_token
-        return {
-            "required": bool(secret),
-            "authenticated": (not secret) or _authenticated(request, secret),
-        }
+        return _state(request)
 
     @router_.post("/session", status_code=204)
     async def open_session(request: Request, response: Response, body: Credentials):
-        secret = _settings(request).auth_token
-        if not secret:
-            raise HTTPException(status_code=400, detail="this dashboard has no token configured")
+        accounts = _accounts(request)
+        account = accounts.current()
+        if account is None:
+            raise HTTPException(status_code=400, detail="no login is configured")
 
         client = _client(request)
         throttle = _throttle(request)
@@ -113,22 +140,22 @@ def session_router() -> APIRouter:
             log.warning("login throttled for %s", client)
             raise HTTPException(status_code=429, detail="too many attempts, try again in a minute")
 
-        if not secrets.compare_digest(body.token, secret):
+        if not accounts.verify(body.username.strip(), body.password):
             throttle.fail(client)
-            log.warning("failed login from %s", client)
-            raise HTTPException(status_code=401, detail="invalid token")
+            log.warning("failed login for %r from %s", body.username, client)
+            raise HTTPException(status_code=401, detail="wrong username or password")
 
         throttle.clear(client)
         response.set_cookie(
             auth.COOKIE,
-            auth.issue(secret),
+            auth.issue(account.signing_secret),
             max_age=auth.SESSION_SECONDS,
             httponly=True,
             samesite="strict",
             secure=_is_https(request),
             path="/",
         )
-        log.info("session opened for %s", client)
+        log.info("session opened for %r from %s", account.username, client)
 
     @router_.delete("/session", status_code=204)
     async def close_session(request: Request, response: Response):
@@ -191,7 +218,57 @@ async def _live_payload(request: Request, car_id: int) -> dict[str, Any]:
 
 
 def router() -> APIRouter:
-    api = APIRouter(dependencies=[Depends(require_token)])
+    api = APIRouter(dependencies=[Depends(require_login)])
+
+    @api.put("/settings/auth")
+    async def update_auth(request: Request, response: Response, body: AuthSettings):
+        """Turn the login on or off, change the name, change the password.
+
+        One endpoint with three optional fields, because that is what the settings
+        page submits. Changing anything on an already-protected dashboard asks for
+        the current password again: a laptop left unlocked should not be enough to
+        lock the owner out of their own car.
+        """
+        accounts = _accounts(request)
+        account = accounts.current()
+
+        if account is not None and not accounts.confirm(body.current_password or ""):
+            raise HTTPException(status_code=403, detail="current password is wrong")
+
+        username = (body.username or (account.username if account else "admin")).strip()
+        if not username or len(username) > 32:
+            raise HTTPException(status_code=400, detail="username must be 1-32 characters")
+        password = body.new_password
+        if password is not None and len(password) < 4:
+            raise HTTPException(status_code=400, detail="password must be at least 4 characters")
+
+        try:
+            if not body.enabled:
+                accounts.disable()
+                response.delete_cookie(auth.COOKIE, path="/")
+            elif account is None:
+                accounts.enable(username, password or "admin")
+            else:
+                accounts.change(username=username, password=password)
+        except RuntimeError as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+        current_account = accounts.current()
+        if current_account is None:
+            return _state(request)
+
+        # Sign the person who just made the change back in with the new secret:
+        # changing the password should not feel like being thrown out.
+        response.set_cookie(
+            auth.COOKIE,
+            auth.issue(current_account.signing_secret),
+            max_age=auth.SESSION_SECONDS,
+            httponly=True,
+            samesite="strict",
+            secure=_is_https(request),
+            path="/",
+        )
+        return _state(request, signed_in=True)
 
     @api.get("/cars")
     async def cars(request: Request):

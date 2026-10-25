@@ -102,27 +102,29 @@ DATABASE_HOST=localhost DATABASE_PASS=... MQTT_HOST=localhost python -m app
 | `MQTT_HOST` | `mosquitto` | TeslaMate 的服务名 |
 | `MQTT_PORT` / `MQTT_USERNAME` / `MQTT_PASSWORD` | `1883` / — / — | broker 需要认证时才填 |
 | `TZ` | `Asia/Shanghai` | 决定"今天"从几点开始 |
-| `AUTH_TOKEN` | 空 | 留空即不校验，内网可用，公网绝对不行。详见下节 |
+| `DATA_DIR` | `data` | 账号文件所在目录；镜像里设为 `/data` 并挂了卷 |
 
 就这些。没有按车配置（车辆从数据库自动发现），也没有坐标配置（存什么返回什么）。
 
-### 鉴权
+### 登录（想开就开）
 
-设置 `AUTH_TOKEN` 后，看板只问一次，之后记住你。
+不需要提前配置任何东西。看板默认是开放的，并且会在页面上明说——第一次打开应该先看到你的车，而不是一个登录框。想要加锁时，**设置 → 访问保护** 打开即可：用户名 + 密码，初始 `admin` / `admin`，改掉之前页面会一直提醒你。
 
-- 令牌会换成一张 **HttpOnly + SameSite=Strict 的会话 cookie**（30 天）。JavaScript 拿不到令牌，令牌也不会出现在任何 URL 里 —— 用查询参数给 SSE 鉴权，等于把这个密钥写进每一份访问日志和浏览器历史。
-- 换掉 `AUTH_TOKEN` 会让所有会话立刻失效。这就是全部的吊销机制，也因此服务端什么都不用存。
-- 脚本照常可用：任意接口都接受 `Authorization: Bearer <令牌>`。
-- 同一来源每分钟失败 10 次就会被拒，短线令牌没法靠猜。
-- 留空也支持，界面会用一条可关闭的提示明说「任何人都能看到」，而不是假装它很安全。
+- 只有一个账号，以 PBKDF2 哈希存在 `${DATA_DIR}/auth.json`。没有用户表、没有角色、没有邮箱。
+- 会话是一张 **HttpOnly + SameSite=Strict 的 cookie**，30 天有效。密码相关的任何东西都不进 JavaScript，也不会有密钥出现在 URL 里。
+- 改密码会让其他所有浏览器退出登录；做改动的那一个会保持登录。
+- 同一来源每分钟失败 10 次会被拒。
+- 关闭访问保护会删掉该文件，看板回到开放状态。
+- 忘了密码？删掉 `data/auth.json` 再刷新即可。有 shell 权限的人本来就能这么做，这里只是不假装相反。
 
 ## 接口
 
 ```
 GET    /healthz               数据库与 broker 状态，供容器健康检查
 GET    /api/v1/session        是否需要登录，以及当前是否已登录
-POST   /api/v1/session        用 AUTH_TOKEN 换取会话 cookie
+POST   /api/v1/session        用户名密码换取会话 cookie
 DELETE /api/v1/session        退出登录
+PUT    /api/v1/settings/auth  开关登录保护、改用户名、改密码
 GET    /api/v1/cars           这个 TeslaMate 库里的所有车
 GET    /api/v1/live           当前状态（优先 MQTT，冷启动回退到最新位置）
 GET    /api/v1/summary        首页所需内容，一次请求拿全
@@ -139,7 +141,7 @@ GET    /api/v1/stream         SSE：先一帧快照，之后每次变化推一�
 | P1 | FastAPI：只读库、MQTT→SSE、`/api/v1/summary`、`/drives`、健康检查 | ✅ 完成 |
 | P2 | React 应用：概览、行程、卡片注册表、中英切换、明暗主题 | ✅ 完成 |
 | P3 | 统计：月度里程与电费、由充电记录反推电池容量 | ✅ 完成 |
-| P4 | 认证（会话 cookie、限速、CSP）、PWA、镜像、群晖文档 | 🚧 进行中 |
+| P4 | 登录（账号文件、会话 cookie、限速、CSP）、PWA、镜像、文档 | 🚧 进行中 |
 | P5 | 轨迹回放、多车 | ⬜ |
 
 ## 开发
@@ -165,7 +167,7 @@ cd frontend && npm install && npm run dev  # http://localhost:5173
 
 - **驻车用电无法归因**。车停着时 TeslaMate 在 `positions` 里几乎不记录功率 —— 实测一次露营模式（空调实际 500–1500W）期间只记录到 −14W 到 +2W。所以由充电记录算出的「每公里电费」里含空调、露营模式与静置耗电，会高于车机自己报的行驶能耗。要拆分就得全量扫 `positions`：一个月 1.1 秒，六个月 6.8 秒。放进页面太慢，为一个「一个月才看一次」的数字建物化视图也不值。
 - **电费取决于有没有配电价**。只有配置过分时电价或手工填过价格，TeslaMate 才会存这一笔的 `cost`；本库 501 次充电里只有 357 次有值。没价格时返回 `null`，不会当成 0 元。
-- **单令牌、无用户体系**。`AUTH_TOKEN` 是一个共享密钥，会话也区分不了「谁」在用。一个家庭够用，但不是多用户系统；除了换令牌，没有按设备吊销的手段。
+- **只有一个账号，没有用户体系**。登录的目的是「能把门关上」，不是区分「谁」。所有人登录后都是同一个人，也没有按设备管理会话的列表。
 
 ## 设计决策
 

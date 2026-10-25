@@ -7,6 +7,7 @@ here needs tuning to get a running dashboard.
 
 from __future__ import annotations
 
+from pathlib import Path
 from urllib.parse import quote
 
 from pydantic import field_validator
@@ -28,13 +29,20 @@ class Settings(BaseSettings):
     mqtt_password: str = ""
 
     tz: str = "Asia/Shanghai"
-    auth_token: str = ""
     log_level: str = "INFO"
+
+    # Where the account file lives. The image sets /data and mounts a volume there;
+    # the default keeps development inside the working directory.
+    data_dir: str = "data"
 
     @field_validator("log_level")
     @classmethod
     def _upper(cls, v: str) -> str:
         return v.upper()
+
+    @property
+    def auth_file(self) -> Path:
+        return Path(self.data_dir) / "auth.json"
 
     @property
     def dsn(self) -> str:

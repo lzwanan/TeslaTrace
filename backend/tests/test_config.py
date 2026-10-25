@@ -11,7 +11,8 @@ def test_defaults_match_teslamate_compose_names(monkeypatch):
     assert settings.database_name == "teslamate"
     assert settings.mqtt_host == "mosquitto"
     assert settings.tz == "Asia/Shanghai"
-    assert settings.auth_token == ""  # open by default on a trusted network
+    assert settings.data_dir == "data"  # the account file lives here, not in env
+    assert settings.auth_file.name == "auth.json"
 
 
 def test_env_overrides(monkeypatch):

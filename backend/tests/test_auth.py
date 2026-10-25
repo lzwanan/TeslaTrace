@@ -1,77 +1,120 @@
-"""Session cookie, login throttling and the headers that go with them."""
+"""The account file, the login, and the settings that change both."""
 
 from __future__ import annotations
 
-import time
+from pathlib import Path
 
 import pytest
 from test_api import make_client
 
 from app import auth
-from app.config import Settings
+from app.accounts import Accounts, hash_password, verify_password
 
-SECRET = "s3cret-token"
-
-
-def test_cookie_roundtrip_and_expiry():
-    cookie = auth.issue(SECRET)
-    assert auth.verify(SECRET, cookie)
-    # A second short of the expiry is still valid; one second past is not.
-    expires = int(cookie.split(".")[0])
-    assert auth.verify(SECRET, cookie, now=expires - 1)
-    assert not auth.verify(SECRET, cookie, now=expires + 1)
+LOGIN = {"username": "admin", "password": "admin"}
 
 
-def test_cookie_is_bound_to_the_secret():
-    """Rotating AUTH_TOKEN must log everyone out — that is the whole revocation story."""
-    cookie = auth.issue(SECRET)
-    assert not auth.verify("another-token", cookie)
+# --------------------------------------------------------------------- password
 
 
-@pytest.mark.parametrize("value", ["", "junk", "123", "123.", ".abc", "abc.def"])
-def test_malformed_cookies_are_rejected(value: str):
-    assert not auth.verify(SECRET, value)
+def test_hash_roundtrip():
+    stored = hash_password("correct horse")
+    assert verify_password(stored, "correct horse")
+    assert not verify_password(stored, "correct hors")
+    assert stored.startswith("pbkdf2_sha256$")
 
 
-def test_tampered_cookie_is_rejected():
-    cookie = auth.issue(SECRET)
-    expires, _, digest = cookie.partition(".")
-    assert not auth.verify(SECRET, f"{int(expires) + 3600}.{digest}")
+def test_hash_is_salted():
+    assert hash_password("same") != hash_password("same")
 
 
-def test_throttle_blocks_after_the_limit():
-    throttle = auth.Throttle(limit=3, window=60)
-    for index in range(3):
-        assert not throttle.blocked("1.2.3.4", now=index)
-        throttle.fail("1.2.3.4", now=index)
-    assert throttle.blocked("1.2.3.4", now=3)
-    # A different client is unaffected, and a success clears the counter.
-    assert not throttle.blocked("5.6.7.8", now=3)
-    throttle.clear("1.2.3.4")
-    assert not throttle.blocked("1.2.3.4", now=3)
+@pytest.mark.parametrize(
+    "stored",
+    ["", "junk", "pbkdf2_sha256$1", "md5$1$aa$bb", "pbkdf2_sha256$x$aa$bb"],
+)
+def test_malformed_hashes_are_rejected(stored: str):
+    assert not verify_password(stored, "anything")
 
 
-def test_throttle_forgets_old_failures():
-    throttle = auth.Throttle(limit=2, window=10)
-    throttle.fail("1.2.3.4", now=0)
-    throttle.fail("1.2.3.4", now=1)
-    assert throttle.blocked("1.2.3.4", now=2)
-    assert not throttle.blocked("1.2.3.4", now=30)
+# --------------------------------------------------------------------- accounts
 
 
-def test_session_endpoint_reports_an_open_dashboard():
+def test_no_file_means_open_access(tmp_path: Path):
+    accounts = Accounts(tmp_path / "auth.json")
+    assert accounts.current() is None
+
+
+def test_enable_writes_the_file_and_survives_a_reload(account_file: Path):
+    Accounts(account_file).enable("liu", "hunter2")
+
+    assert account_file.exists()
+    reloaded = Accounts(account_file)
+    assert reloaded.current() is not None
+    assert reloaded.verify("liu", "hunter2")
+    assert not reloaded.verify("liu", "hunter3")
+    assert not reloaded.verify("admin", "hunter2")
+
+
+def test_the_shipped_default_is_flagged(account_file: Path):
+    accounts = Accounts(account_file)
+    assert accounts.enable("admin", "admin").default_password is True
+    assert Accounts(account_file).enable("admin", "something").default_password is False
+
+
+def test_changing_the_password_clears_the_default_flag(account_file: Path):
+    accounts = Accounts(account_file)
+    accounts.enable("admin", "admin")
+    updated = accounts.change(password="a real one")
+
+    assert updated.default_password is False
+    assert accounts.verify("admin", "a real one")
+
+
+def test_disabling_removes_the_file(account_file: Path):
+    accounts = Accounts(account_file)
+    accounts.enable("admin", "admin")
+    accounts.disable()
+
+    assert accounts.current() is None
+    assert not account_file.exists()
+
+
+def test_a_corrupt_file_opens_rather_than_locking_the_owner_out(account_file: Path):
+    account_file.parent.mkdir(parents=True)
+    account_file.write_text("{ this is not json", encoding="utf-8")
+
+    assert Accounts(account_file).current() is None
+
+
+def test_the_password_is_not_stored_in_plain_text(account_file: Path):
+    Accounts(account_file).enable("admin", "hunter2")
+
+    raw = account_file.read_text(encoding="utf-8")
+    assert "hunter2" not in raw
+
+
+# ----------------------------------------------------------------------- the API
+
+
+def test_an_open_dashboard_says_so():
     with make_client() as client:
-        body = client.get("/api/v1/session").json()
+        assert client.get("/api/v1/session").json() == {
+            "required": False,
+            "authenticated": True,
+            "username": None,
+            "default_password": False,
+        }
 
-    assert body == {"required": False, "authenticated": True}
 
+def test_login_opens_the_api_and_sign_out_closes_it(locked: Accounts):
+    with make_client(accounts=locked) as client:
+        assert client.get("/api/v1/session").json() == {
+            "required": True,
+            "authenticated": False,
+            "username": "admin",
+            "default_password": True,
+        }
 
-def test_login_sets_a_cookie_that_opens_the_api():
-    with make_client(settings=Settings(auth_token=SECRET)) as client:
-        assert client.get("/api/v1/session").json() == {"required": True, "authenticated": False}
-        assert client.get("/api/v1/cars").status_code == 401
-
-        assert client.post("/api/v1/session", json={"token": SECRET}).status_code == 204
+        assert client.post("/api/v1/session", json=LOGIN).status_code == 204
         assert client.get("/api/v1/session").json()["authenticated"] is True
         assert client.get("/api/v1/cars").status_code == 200
 
@@ -79,34 +122,149 @@ def test_login_sets_a_cookie_that_opens_the_api():
         assert client.get("/api/v1/cars").status_code == 401
 
 
-def test_wrong_token_does_not_set_a_cookie():
-    with make_client(settings=Settings(auth_token=SECRET)) as client:
-        response = client.post("/api/v1/session", json={"token": "nope"})
+def test_a_wrong_password_sets_no_cookie(locked: Accounts):
+    with make_client(accounts=locked) as client:
+        response = client.post(
+            "/api/v1/session", json={"username": "admin", "password": "nope"}
+        )
 
     assert response.status_code == 401
     assert "set-cookie" not in {name.lower() for name in response.headers}
 
 
-def test_repeated_failures_are_throttled():
-    with make_client(settings=Settings(auth_token=SECRET)) as client:
-        codes = [client.post("/api/v1/session", json={"token": "nope"}).status_code for _ in range(12)]
+def test_a_wrong_username_is_refused(locked: Accounts):
+    with make_client(accounts=locked) as client:
+        response = client.post("/api/v1/session", json={"username": "root", "password": "admin"})
+
+    assert response.status_code == 401
+
+
+def test_repeated_failures_are_throttled(locked: Accounts):
+    with make_client(accounts=locked) as client:
+        codes = [
+            client.post(
+                "/api/v1/session", json={"username": "admin", "password": "nope"}
+            ).status_code
+            for _ in range(12)
+        ]
 
     assert codes[:10] == [401] * 10
     assert codes[10] == 429
 
 
-def test_a_success_resets_the_counter():
-    with make_client(settings=Settings(auth_token=SECRET)) as client:
+def test_a_successful_login_resets_the_counter(locked: Accounts):
+    with make_client(accounts=locked) as client:
         for _ in range(9):
-            client.post("/api/v1/session", json={"token": "nope"})
-        assert client.post("/api/v1/session", json={"token": SECRET}).status_code == 204
-        # Ten more wrong guesses are allowed again, not blocked from the first one.
-        assert client.post("/api/v1/session", json={"token": "nope"}).status_code == 401
+            client.post("/api/v1/session", json={"username": "admin", "password": "nope"})
+        assert client.post("/api/v1/session", json=LOGIN).status_code == 204
+        assert (
+            client.post(
+                "/api/v1/session", json={"username": "admin", "password": "nope"}
+            ).status_code
+            == 401
+        )
 
 
-def test_login_is_refused_when_no_token_is_configured():
+def test_login_is_refused_when_nothing_is_configured():
     with make_client() as client:
-        assert client.post("/api/v1/session", json={"token": "anything"}).status_code == 400
+        assert client.post("/api/v1/session", json=LOGIN).status_code == 400
+
+
+def test_changing_the_password_signs_other_browsers_out(locked: Accounts):
+    """Two browsers, one password change: the other one is locked out, this one is not."""
+    with make_client(accounts=locked) as mine, make_client(accounts=locked) as other:
+        for client in (mine, other):
+            assert client.post("/api/v1/session", json=LOGIN).status_code == 204
+
+        response = mine.put(
+            "/api/v1/settings/auth",
+            json={"enabled": True, "new_password": "a better one", "current_password": "admin"},
+        )
+        assert response.status_code == 200
+        assert response.json()["default_password"] is False
+
+        # Its cookie was signed with the old hash, so it is worthless now.
+        assert other.get("/api/v1/cars").status_code == 401
+        # The browser that made the change was handed a fresh one.
+        assert mine.get("/api/v1/cars").status_code == 200
+
+
+def test_settings_require_the_current_password(locked: Accounts):
+    with make_client(accounts=locked) as client:
+        client.post("/api/v1/session", json=LOGIN)
+
+        assert (
+            client.put(
+                "/api/v1/settings/auth",
+                json={"enabled": True, "new_password": "sneaky", "current_password": "wrong"},
+            ).status_code
+            == 403
+        )
+        assert client.put("/api/v1/settings/auth", json={"enabled": False}).status_code == 403
+
+
+def test_settings_need_a_login(locked: Accounts):
+    with make_client(accounts=locked) as client:
+        assert client.put("/api/v1/settings/auth", json={"enabled": False}).status_code == 401
+
+
+def test_enabling_protection_from_an_open_dashboard(account_file: Path):
+    accounts = Accounts(account_file)
+    with make_client(accounts=accounts) as client:
+        response = client.put(
+            "/api/v1/settings/auth",
+            json={"enabled": True, "username": "admin", "new_password": "admin"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["required"] is True
+        assert response.json()["default_password"] is True
+        assert accounts.current() is not None
+
+
+def test_disabling_protection_reopens_the_dashboard(locked: Accounts):
+    with make_client(accounts=locked) as client:
+        client.post("/api/v1/session", json=LOGIN)
+        response = client.put(
+            "/api/v1/settings/auth", json={"enabled": False, "current_password": "admin"}
+        )
+
+        assert response.status_code == 200
+        assert response.json()["required"] is False
+        assert client.get("/api/v1/cars").status_code == 200
+
+
+def test_short_passwords_and_blank_usernames_are_refused(locked: Accounts):
+    with make_client(accounts=locked) as client:
+        client.post("/api/v1/session", json=LOGIN)
+
+        assert (
+            client.put(
+                "/api/v1/settings/auth",
+                json={"enabled": True, "new_password": "abc", "current_password": "admin"},
+            ).status_code
+            == 400
+        )
+        assert (
+            client.put(
+                "/api/v1/settings/auth",
+                json={"enabled": True, "username": "   ", "current_password": "admin"},
+            ).status_code
+            == 400
+        )
+
+
+def test_the_cookie_is_httponly_and_samesite(locked: Accounts):
+    with make_client(accounts=locked) as client:
+        response = client.post("/api/v1/session", json=LOGIN)
+
+    cookie = response.headers["set-cookie"].lower()
+    assert "httponly" in cookie
+    assert "samesite=strict" in cookie
+    assert f"max-age={auth.SESSION_SECONDS}" in cookie
+
+
+# ----------------------------------------------------------------------- headers
 
 
 def test_security_headers_are_present():
@@ -125,24 +283,3 @@ def test_docs_are_exempt_from_the_policy():
         response = client.get("/api/docs")
 
     assert "content-security-policy" not in response.headers
-
-
-def test_session_cookie_is_httponly_and_samesite():
-    with make_client(settings=Settings(auth_token=SECRET)) as client:
-        response = client.post("/api/v1/session", json={"token": SECRET})
-
-    cookie = response.headers["set-cookie"].lower()
-    assert "httponly" in cookie
-    assert "samesite=strict" in cookie
-    assert f"max-age={auth.SESSION_SECONDS}" in cookie
-
-
-def test_session_survives_a_restart():
-    """Nothing is stored server side: the cookie alone is the proof."""
-    with make_client(settings=Settings(auth_token=SECRET)) as client:
-        client.post("/api/v1/session", json={"token": SECRET})
-        cookie = client.cookies.get(auth.COOKIE)
-
-    assert cookie
-    assert auth.verify(SECRET, cookie)
-    assert int(cookie.split(".")[0]) > time.time()

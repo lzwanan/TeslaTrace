@@ -13,6 +13,7 @@ from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
+from .accounts import Accounts
 from .api import health_router, router, session_router
 from .config import Settings
 from .db import open_pool
@@ -74,8 +75,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         configure_logging(settings.log_level)
         log.info("TeslaTrace %s starting", __version__)
 
-        if not settings.auth_token:
-            log.warning("AUTH_TOKEN is empty — the API is open. Only do this on a trusted network.")
+        accounts = Accounts(settings.auth_file)
+        app.state.accounts = accounts
+        account = accounts.current()
+        if account is None:
+            log.warning(
+                "no login configured — anyone who can reach this page sees where the car is. "
+                "Turn one on in Settings."
+            )
+        else:
+            log.info("login required as %r (%s)", account.username, settings.auth_file)
+            if account.default_password:
+                log.warning("the default password is still in use — change it in Settings")
+
         log.info(
             "db=%s:%s/%s mqtt=%s:%s tz=%s",
             settings.database_host, settings.database_port, settings.database_name,

@@ -1,11 +1,11 @@
 """Sessions, without a user table.
 
-The cookie is ``<expiry>.<hmac>``, signed with ``AUTH_TOKEN`` itself. Three
+The cookie is ``<expiry>.<hmac>``, signed with the stored password hash. Three
 consequences worth keeping:
 
-* nothing is stored server side — no database, no file, no in-memory map to leak;
-* rotating ``AUTH_TOKEN`` invalidates every session at once, which is the only
-  revocation mechanism a single-user dashboard needs;
+* nothing is stored server side — no session table, no in-memory map to leak;
+* changing the password invalidates every session at once, which is the only
+  revocation mechanism a single-account dashboard needs;
 * the cookie is HttpOnly and SameSite=Strict, so a script on the page cannot read
   it and another site cannot make the browser send it.
 

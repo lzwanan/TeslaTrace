@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
+from app.accounts import Accounts
 from app.api import live_events
 from app.config import Settings
 from app.events import Hub
@@ -69,7 +70,7 @@ class FakeStore:
         return self._healthy
 
 
-def make_client(*, settings=None, store=None, live=None, connected=True) -> TestClient:
+def make_client(*, settings=None, store=None, live=None, connected=True, accounts=None) -> TestClient:
     settings = settings or Settings()
     app = create_app(settings)
 
@@ -79,6 +80,7 @@ def make_client(*, settings=None, store=None, live=None, connected=True) -> Test
         app_.state.store = store or FakeStore()
         app_.state.live = live or LiveRegistry()
         app_.state.hub = Hub()
+        app_.state.accounts = accounts if accounts is not None else Accounts(None)
         app_.state.mqtt = SimpleNamespace(connected=connected)
         yield
 
@@ -192,20 +194,10 @@ def test_missing_car_is_a_404():
     assert response.status_code == 404
 
 
-def test_token_guards_api_but_not_healthz():
-    settings = Settings(auth_token="s3cret")
-    with make_client(settings=settings) as client:
+def test_a_login_guards_the_api_but_not_healthz(locked):
+    with make_client(accounts=locked) as client:
         assert client.get("/healthz").status_code == 200
         assert client.get("/api/v1/cars").status_code == 401
-        assert client.get("/api/v1/cars", headers={"Authorization": "Bearer nope"}).status_code == 401
-        assert client.get("/api/v1/cars", headers={"Authorization": "Bearer s3cret"}).status_code == 200
-
-
-def test_token_in_the_query_string_no_longer_works():
-    """It used to, for the sake of EventSource. It also put the token in every log."""
-    settings = Settings(auth_token="s3cret")
-    with make_client(settings=settings) as client:
-        assert client.get("/api/v1/cars?token=s3cret").status_code == 401
 
 
 def test_stream_is_routed_and_404s_without_a_car():

@@ -98,7 +98,7 @@ pip install -e ".[dev]"
 DATABASE_HOST=localhost DATABASE_PASS=... MQTT_HOST=localhost python -m app
 ```
 
-Finally, reverse-proxy it with HTTPS and put an auth layer in front. **Do not expose it to the internet without authentication** — it shows your car's real-time location.
+Then turn on a login (Settings → Access) if you plan to reach it from anywhere but your own network, and reverse-proxy it with HTTPS. This page shows where your car is, right now.
 
 ## Configuration
 
@@ -110,27 +110,29 @@ Finally, reverse-proxy it with HTTPS and put an auth layer in front. **Do not ex
 | `MQTT_HOST` | `mosquitto` | TeslaMate's service name |
 | `MQTT_PORT` / `MQTT_USERNAME` / `MQTT_PASSWORD` | `1883` / — / — | Only if your broker needs auth |
 | `TZ` | `Asia/Shanghai` | Decides where "today" starts |
-| `AUTH_TOKEN` | empty | Empty means the API is open — fine on a LAN, never on the internet. See below |
+| `DATA_DIR` | `data` | Where the account file lives. The image sets `/data` and mounts a volume there |
 
 That is the whole surface. There is no per-car setting (cars are discovered from the database) and no coordinate setting (the API returns what TeslaMate stored).
 
-### Authentication
+### A login, if you want one
 
-Set `AUTH_TOKEN` and the dashboard asks for it once, then remembers you.
+Nothing to configure up front. The dashboard starts open and says so on screen, because a first run should show you your car rather than a login box. When you want a door, **Settings → Access** turns one on: username and password, `admin` / `admin` to begin with, and the page keeps reminding you until you change them.
 
-- The token is exchanged for an **HttpOnly, SameSite=Strict session cookie** (30 days). JavaScript never holds the token, and it never appears in a URL — a stream that authenticates by query string leaks the secret into every access log and browser history.
-- Rotating `AUTH_TOKEN` invalidates every session at once. That is the whole revocation story, so there is nothing to store server side.
-- Scripts keep working: `Authorization: Bearer <token>` is still accepted on any endpoint.
-- Ten failed attempts per minute from one address are refused, which is what stops a short token from being guessed.
-- Leaving `AUTH_TOKEN` empty is supported, and the UI says so in a dismissible banner rather than pretending the dashboard is private.
+- One account, stored as a PBKDF2 hash in `${DATA_DIR}/auth.json`. No user table, no roles, no email.
+- The session is an **HttpOnly, SameSite=Strict cookie** good for 30 days. Nothing about the password lives in JavaScript, and no secret ever appears in a URL.
+- Changing the password signs out every other browser. The one that made the change stays signed in.
+- Ten failed logins a minute from one address are refused.
+- Switching protection off deletes the file and reopens the dashboard.
+- Forgot the password? Delete `data/auth.json` and reload. That is also, deliberately, what anyone with shell access can do.
 
 ## API
 
 ```
 GET    /healthz                database + broker status, for the container healthcheck
 GET    /api/v1/session         is a login required, and am I logged in
-POST   /api/v1/session         exchange AUTH_TOKEN for a session cookie
+POST   /api/v1/session         username and password -> session cookie
 DELETE /api/v1/session         sign out
+PUT    /api/v1/settings/auth   turn the login on or off, rename, change password
 GET    /api/v1/cars            every car in this TeslaMate database
 GET    /api/v1/live            current state (MQTT first, newest position as fallback)
 GET    /api/v1/summary         the whole home screen in one request
@@ -147,7 +149,7 @@ GET    /api/v1/stream          SSE: one snapshot, then a frame per change
 | P1    | FastAPI: read-only DB, MQTT → SSE, `/api/v1/summary`, `/drives`, healthcheck | ✅ done      |
 | P2    | React app: overview, drives, card registry, zh/en, dark and light            | ✅ done      |
 | P3    | Insights: monthly distance and cost, battery capacity from charge sessions   | ✅ done      |
-| P4    | Auth: session cookie, throttling, CSP. PWA, image, Synology docs             | 🚧 in progress |
+| P4    | Login: account file, session cookie, throttling, CSP. PWA, image, docs       | 🚧 in progress |
 | P5    | Trip replay, multi-car                                                       | ⬜           |
 
 
@@ -174,7 +176,7 @@ See [`docs/metrics.md`](docs/metrics.md) for the metric-by-metric feasibility no
 
 - **Parked energy cannot be attributed.** While the car is parked TeslaMate records essentially no power in `positions` — measured −14 W to +2 W during a camp-mode session that actually draws 500–1500 W. So a cost-per-kilometre figure derived from charge sessions includes climate, camp mode and standby drain, and reads higher than the consumption the car reports about itself. Splitting the two needs a full scan of `positions`: 1.1 s for one month, 6.8 s for six. Too slow for a page, and not worth a materialized view for a number you look at once a month.
 - **Cost is only as good as the tariff.** TeslaMate stores a price per session only when a tariff or a manual entry exists; on the reference database that is 357 of 501 sessions. Missing prices stay `null` rather than becoming zero.
-- **One token, no users.** `AUTH_TOKEN` is a single shared secret, and a session says nothing about *who* is using it. Fine for a household; not a multi-user system, and there is no per-device revocation beyond rotating the token.
+- **One account, no users.** The login exists so the door can be shut, not to tell people apart. Everyone who signs in is the same person, and there is no per-device session list to revoke.
 
 ## Design decisions
 

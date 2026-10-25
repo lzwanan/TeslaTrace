@@ -16,6 +16,10 @@ frontend/dist/
 node_modules/
 .vite/
 
+# --- Runtime state (holds a password hash) ---
+data/
+backend/data/
+
 # --- Secrets (never commit) ---
 .env
 .env.*
